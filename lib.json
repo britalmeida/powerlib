@@ -1,0 +1,40 @@
+{
+    "Characters": {
+        "Boris": {
+            "group": [
+                [
+                    "./char/Boris Kloris - WIP.blend",
+                    "Boris"
+                ]
+            ]
+        },
+        "Agent": {
+            "group": [
+                [
+                    "./char/Agent327- WIP.blend",
+                    "Boris"
+                ]
+            ]
+        }
+    },
+    "Sets": {
+        "barbershop": {
+            "link_objects": [
+                [
+                    "./scenes/01_barbershop.blend",
+                    "chair"
+                ]
+            ]
+        }
+    },
+    "Test": {
+        "test": {
+            "instance_groups": [
+                [
+                    "scenes/01_barbershop.blend",
+                    "Group"
+                ]
+            ]
+        }
+    }
+}
