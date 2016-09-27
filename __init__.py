@@ -106,7 +106,7 @@ class ColAndAssetRequiredOperator(ColRequiredOperator):
 class ASSET_OT_powerlib_reload_from_json(Operator):
     bl_idname = "wm.powerlib_reload_from_json"
     bl_label = "Reload from JSON"
-    bl_description = ""
+    bl_description = "Loads the library from the JSON file. Overrides non saved local edits!"
     bl_options = {'UNDO', 'REGISTER'}
 
     @classmethod
@@ -125,6 +125,29 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                 # TODO to be continued
         # todo verify, clear, frees nested, default value for asset active?
         return {'FINISHED'}
+
+class ASSET_OT_powerlib_save_to_json(Operator):
+    bl_idname = "wm.powerlib_save_to_json"
+    bl_label = "Save to JSON"
+    bl_description = "Saves the edited library to the json file. Overrides the previous content!"
+    bl_options = {'UNDO', 'REGISTER'}
+
+    @classmethod
+    def poll(self, context):
+        return True
+
+    def execute(self, context):
+        wm = context.window_manager
+        with open(os.path.join(os.path.dirname(__file__), "lib.json")) as data_file:
+            col_json_dict = {}
+            for col in wm.powerlib_cols:
+                assets_json_dict = {}
+                for asset in col.assets:
+                    assets_json_dict[asset.name] = {} # todo to be continued
+                col_json_dict[col.name] = assets_json_dict
+                print(json.dumps(col_json_dict, indent=4)) #sorted_keys=True  ## TODO!!
+        return {'FINISHED'}
+
 
 class ASSET_OT_powerlib_collection_rename(AssetColRequiredOperator):
     bl_idname = "wm.powerlib_collection_rename"
@@ -299,6 +322,10 @@ class ASSET_PT_powerlib(Panel):
             row.enabled = False
             row.label("No Asset Collection Selected")
 
+        layout.separator()
+        row = layout.row()
+        row.operator("wm.powerlib_save_to_json", icon='FILE_REFRESH')
+
 
 
 # Registry ####################################################################
@@ -309,6 +336,7 @@ classes = (
     ASSET_UL_collection_assets,
     ASSET_PT_powerlib,
     ASSET_OT_powerlib_reload_from_json,
+    ASSET_OT_powerlib_save_to_json,
     ASSET_OT_powerlib_collection_rename,
     ASSET_OT_powerlib_collection_add,
     ASSET_OT_powerlib_collection_del,
