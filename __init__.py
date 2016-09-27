@@ -86,6 +86,23 @@ class AssetCollection(PropertyGroup):
 
 # Operators ###################################################################
 
+class ColRequiredOperator(Operator):
+    @classmethod
+    def poll(self, context):
+        wm = context.window_manager
+        return (wm.powerlib_active_col
+            and wm.powerlib_cols[wm.powerlib_active_col])
+
+class ColAndAssetRequiredOperator(ColRequiredOperator):
+    @classmethod
+    def poll(self, context):
+        if super().poll(context):
+            wm = context.window_manager
+            col = wm.powerlib_cols[wm.powerlib_active_col]
+            return (col.active_asset < len(col.assets)
+                and col.active_asset >= 0)
+        return False
+
 class ASSET_OT_powerlib_reload_from_json(Operator):
     bl_idname = "wm.powerlib_reload_from_json"
     bl_label = "Reload from JSON"
@@ -109,19 +126,13 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         # todo verify, clear, frees nested, default value for asset active?
         return {'FINISHED'}
 
-class ASSET_OT_powerlib_collection_rename(Operator):
+class ASSET_OT_powerlib_collection_rename(AssetColRequiredOperator):
     bl_idname = "wm.powerlib_collection_rename"
     bl_label = "Rename Collection"
-    bl_description = "Renames the asset collection"
+    bl_description = "Rename the asset collection"
     bl_options = {'UNDO', 'REGISTER'}
 
     name = StringProperty(name="Name", description="Name of the collection")
-
-    @classmethod
-    def poll(self, context):
-        wm = context.window_manager
-        return (wm.powerlib_active_col
-            and wm.powerlib_cols[wm.powerlib_active_col])
 
     def invoke(self, context, event):
         wm = context.window_manager
@@ -136,25 +147,92 @@ class ASSET_OT_powerlib_collection_rename(Operator):
         wm.powerlib_active_col = self.name
         return {'FINISHED'}
 
+class ASSET_OT_powerlib_collection_add(Operator):
+    bl_idname = "wm.powerlib_collection_add"
+    bl_label = "Add Collection"
+    bl_description = "Add a new asset collection"
+    bl_options = {'UNDO', 'REGISTER'}
 
-class ASSET_OT_powerlib_assetlist_add(Operator):
+    name = StringProperty(name="Name", description="Name of the collection")
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+
+    def execute(self, context):
+        wm = context.window_manager
+        col = wm.powerlib_cols.add()
+        col.name = self.name
+        wm.powerlib_active_col = self.name
+        return {'FINISHED'}
+
+class ASSET_OT_powerlib_collection_del(AssetColRequiredOperator):
+    bl_idname = "wm.powerlib_collection_del"
+    bl_label = "Delete Collection"
+    bl_description = "Delete the selected asset collection"
+    bl_options = {'UNDO', 'REGISTER'}
+
+    def execute(self, context):
+        wm = context.window_manager
+        idx = wm.powerlib_cols.find(wm.powerlib_active_col)
+        wm.powerlib_cols.remove(idx)
+        wm.powerlib_active_col = ""
+        return {'FINISHED'}
+
+class ASSET_OT_powerlib_assetlist_add(AssetColRequiredOperator):
     bl_idname = "wm.powerlib_assetlist_add"
     bl_label = "Add Asset"
     bl_description = "Add a new asset to the selected collection"
     bl_options = {'UNDO', 'REGISTER'}
 
     def execute(self, context):
-        # todo
+        wm = context.window_manager
+        col = wm.powerlib_cols[wm.powerlib_active_col]
+
+        asset = col.assets.add()
+
+        # naming
+        default_name = "NewAsset"
+        if default_name not in col.assets:
+            asset.name  = default_name
+        else:
+            sorted_assets = []
+            for a in col.assets:
+                if a.name.startswith(default_name+"."):
+                    index = a.name[len(default_name)+1:]
+                    if index.isdigit():
+                        sorted_assets.append(index)
+            sorted_assets = sorted(sorted_assets)
+            min_index = 1
+            for num in sorted_assets:
+                num = int(num)
+                if min_index < num:
+                    break
+                min_index = num + 1
+            asset.name = "{:s}.{:03d}".format(default_name, min_index)
+
+        # select newly created asset
+        col.active_asset = len(col.assets) - 1
+
         return {'FINISHED'}
 
-class ASSET_OT_powerlib_assetlist_del(Operator):
+class ASSET_OT_powerlib_assetlist_del(ColAndAssetRequiredOperator):
     bl_idname = "wm.powerlib_assetlist_del"
     bl_label = "Delete Asset"
     bl_description = "Delete the selected asset"
     bl_options = {'UNDO', 'REGISTER'}
 
     def execute(self, context):
-        # todo
+        wm = context.window_manager
+        col = wm.powerlib_cols[wm.powerlib_active_col]
+
+        col.assets.remove(col.active_asset)
+
+        # change currently active asset
+        num_assets = len(col.assets)
+        if (col.active_asset > (num_assets - 1) and num_assets > 0):
+            col.active_asset = num_assets - 1
+
         return {'FINISHED'}
 
 # Panel #######################################################################
@@ -197,8 +275,8 @@ class ASSET_PT_powerlib(Panel):
         )
         if wm.powerlib_is_edit_mode:
             row.operator("wm.powerlib_collection_rename", text="", icon='OUTLINER_DATA_FONT')
-            row.operator("render.preset_add", text="", icon='ZOOMIN')
-            row.operator("render.preset_add", text="", icon='ZOOMOUT')
+            row.operator("wm.powerlib_collection_add", text="", icon='ZOOMIN')
+            row.operator("wm.powerlib_collection_del", text="", icon='ZOOMOUT')
 
         # UI List with the assets of the selected category
 
@@ -225,9 +303,22 @@ class ASSET_PT_powerlib(Panel):
 
 # Registry ####################################################################
 
-def register():
+classes = (
+    AssetItem,
+    AssetCollection,
+    ASSET_UL_collection_assets,
+    ASSET_PT_powerlib,
+    ASSET_OT_powerlib_reload_from_json,
+    ASSET_OT_powerlib_collection_rename,
+    ASSET_OT_powerlib_collection_add,
+    ASSET_OT_powerlib_collection_del,
+    ASSET_OT_powerlib_assetlist_add,
+    ASSET_OT_powerlib_assetlist_del,
+)
 
-    bpy.utils.register_module(__name__)
+def register():
+    for cls in classes:
+        bpy.utils.register_class(cls)
 
     bpy.types.WindowManager.powerlib_is_edit_mode = BoolProperty(
         name="",
@@ -257,7 +348,8 @@ def unregister():
     del bpy.types.WindowManager.powerlib_cols
     del bpy.types.WindowManager.powerlib_is_edit_mode
 
-    bpy.utils.unregister_module(__name__)
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":
