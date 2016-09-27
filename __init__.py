@@ -149,7 +149,7 @@ class ASSET_OT_powerlib_save_to_json(Operator):
         return {'FINISHED'}
 
 
-class ASSET_OT_powerlib_collection_rename(AssetColRequiredOperator):
+class ASSET_OT_powerlib_collection_rename(ColRequiredOperator):
     bl_idname = "wm.powerlib_collection_rename"
     bl_label = "Rename Collection"
     bl_description = "Rename the asset collection"
@@ -189,7 +189,7 @@ class ASSET_OT_powerlib_collection_add(Operator):
         wm.powerlib_active_col = self.name
         return {'FINISHED'}
 
-class ASSET_OT_powerlib_collection_del(AssetColRequiredOperator):
+class ASSET_OT_powerlib_collection_del(ColRequiredOperator):
     bl_idname = "wm.powerlib_collection_del"
     bl_label = "Delete Collection"
     bl_description = "Delete the selected asset collection"
@@ -202,7 +202,7 @@ class ASSET_OT_powerlib_collection_del(AssetColRequiredOperator):
         wm.powerlib_active_col = ""
         return {'FINISHED'}
 
-class ASSET_OT_powerlib_assetlist_add(AssetColRequiredOperator):
+class ASSET_OT_powerlib_assetlist_add(ColRequiredOperator):
     bl_idname = "wm.powerlib_assetlist_add"
     bl_label = "Add Asset"
     bl_description = "Add a new asset to the selected collection"
