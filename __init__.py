@@ -19,16 +19,16 @@
 # <pep8 compliant>
 
 bl_info = {
-    "name": "Reference Library",
-    "author": "Inês Almeida, Francesco Siddi",
-    "version": (0, 1, 0),
+    "name": "Powerlib",
+    "author": "Inês Almeida, Francesco Siddi, Olivier Amrein",
+    "version": (2, 0, 0),
     "blender": (2, 78, 0),
     "location": "View3D > Tool Shelf (T)",
     "description": "todo",
     "warning": "",
     "wiki_url": "http://wiki.blender.org/index.php/Extensions:2.6/Py/"
-                "Scripts/System/-todo-create-new-documentation-page!",
-    "category": "System",
+                "Scripts/Workflow/-todo-create-new-documentation-page!",
+    "category": "Workflow",
 }
 
 import os
@@ -85,8 +85,8 @@ class AssetCollection(PropertyGroup):
 
 # Operators ###################################################################
 
-class ASSET_OT_ref_library_reload_from_json(Operator):
-    bl_idname = "wm.reflib_reload_from_json"
+class ASSET_OT_powerlib_reload_from_json(Operator):
+    bl_idname = "wm.powerlib_reload_from_json"
     bl_label = "Reload from JSON"
     bl_description = ""
     bl_options = {'UNDO', 'REGISTER'}
@@ -97,9 +97,9 @@ class ASSET_OT_ref_library_reload_from_json(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        wm.reflib_cols.clear()
+        wm.powerlib_cols.clear()
         for col_name in asset_categories:
-            asset_collection_prop = wm.reflib_cols.add()
+            asset_collection_prop = wm.powerlib_cols.add()
             asset_collection_prop.name = col_name
             for asset_name, asset_def in asset_categories[col_name].items():
                 asset_prop = asset_collection_prop.assets.add()
@@ -109,8 +109,8 @@ class ASSET_OT_ref_library_reload_from_json(Operator):
         return {'FINISHED'}
 
 
-class ASSET_OT_ref_library_assetlist_add(Operator):
-    bl_idname = "wm.reflib_assetlist_add"
+class ASSET_OT_powerlib_assetlist_add(Operator):
+    bl_idname = "wm.powerlib_assetlist_add"
     bl_label = "Add Asset"
     bl_description = "Add a new asset to the selected collection"
     bl_options = {'UNDO', 'REGISTER'}
@@ -119,8 +119,8 @@ class ASSET_OT_ref_library_assetlist_add(Operator):
         # todo
         return {'FINISHED'}
 
-class ASSET_OT_ref_library_assetlist_del(Operator):
-    bl_idname = "wm.reflib_assetlist_del"
+class ASSET_OT_powerlib_assetlist_del(Operator):
+    bl_idname = "wm.powerlib_assetlist_del"
     bl_label = "Delete Asset"
     bl_description = "Delete the selected asset"
     bl_options = {'UNDO', 'REGISTER'}
@@ -136,11 +136,11 @@ class ASSET_UL_collection_assets(UIList):
         layout.prop(set, "name", text="", icon='QUESTION', emboss=False)
 
 
-class ASSET_PT_ref_library(Panel):
-    bl_label = 'Reference Library'
+class ASSET_PT_powerlib(Panel):
+    bl_label = 'Powerlib'       # panel section name
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
-    bl_category = 'Ref Library'
+    bl_category = 'Powerlib'    # tab name
 
     @classmethod
     def poll(cls, context):
@@ -152,14 +152,14 @@ class ASSET_PT_ref_library(Panel):
 
         layout = self.layout
 
-        layout.operator("wm.reflib_reload_from_json", icon="FILE_REFRESH")
+        layout.operator("wm.powerlib_reload_from_json", icon="FILE_REFRESH")
 
         # Category selector
 
         row = layout.row(align=True)
         row.prop_search(
-            wm, "reflib_active_col",# Currently active
-            wm, "reflib_cols",      # Collection to search
+            wm, "powerlib_active_col",# Currently active
+            wm, "powerlib_cols",      # Collection to search
             text="", icon="QUESTION"# UI icon and label
         )
         row.operator("render.preset_add", text="", icon='OUTLINER_DATA_FONT')
@@ -169,8 +169,8 @@ class ASSET_PT_ref_library(Panel):
         # UI List with the assets of the selected category
 
         row = layout.row()
-        if (wm.reflib_active_col):
-            asset_collection = wm.reflib_cols[wm.reflib_active_col]
+        if (wm.powerlib_active_col):
+            asset_collection = wm.powerlib_cols[wm.powerlib_active_col]
             row.template_list(
                "ASSET_UL_collection_assets", "", # type and unique id
                 asset_collection, "assets",      # pointer to the CollectionProperty
@@ -179,9 +179,9 @@ class ASSET_PT_ref_library(Panel):
             )
             # add/remove/specials UI list Menu
             col = row.column(align=True)
-            col.operator("wm.reflib_assetlist_add", icon='ZOOMIN', text="")
-            col.operator("wm.reflib_assetlist_del", icon='ZOOMOUT', text="")
-            #col.menu("ASSET_MT_reflib_assetlist_specials", icon='DOWNARROW_HLT', text="")
+            col.operator("wm.powerlib_assetlist_add", icon='ZOOMIN', text="")
+            col.operator("wm.powerlib_assetlist_del", icon='ZOOMOUT', text="")
+            #col.menu("ASSET_MT_powerlib_assetlist_specials", icon='DOWNARROW_HLT', text="")
         else:
             row.enabled = False
             row.label("No Asset Collection Selected")
@@ -194,13 +194,13 @@ def register():
 
     bpy.utils.register_module(__name__)
 
-    bpy.types.WindowManager.reflib_cols = CollectionProperty(
-        name="Reference Library Add-on ColProperties",
-        description="Properties and data used by the Reference Library Add-on",
+    bpy.types.WindowManager.powerlib_cols = CollectionProperty(
+        name="Powerlib Add-on ColProperties",
+        description="Properties and data used by the Powerlib Add-on",
         type=AssetCollection,
     )
 
-    bpy.types.WindowManager.reflib_active_col = StringProperty(
+    bpy.types.WindowManager.powerlib_active_col = StringProperty(
         name="",
         description="",
     )
@@ -212,8 +212,8 @@ def register():
 
 def unregister():
 
-    del bpy.types.WindowManager.reflib_active_col
-    del bpy.types.WindowManager.reflib_cols
+    del bpy.types.WindowManager.powerlib_active_col
+    del bpy.types.WindowManager.powerlib_cols
 
     bpy.utils.unregister_module(__name__)
 
