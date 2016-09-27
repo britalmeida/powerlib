@@ -43,6 +43,7 @@ from bpy.types import (
     PropertyGroup,
 )
 from bpy.props import (
+    BoolProperty,
     IntProperty,
     StringProperty,
     EnumProperty,
@@ -147,12 +148,17 @@ class ASSET_PT_powerlib(Panel):
         # restrict availability?
         return True #(context.mode == 'OBJECT')
 
+    def draw_header(self, context):
+        wm = context.window_manager
+
+        row = self.layout.row(align=True)
+        row.prop(wm, "powerlib_is_edit_mode", icon='GREASEPENCIL' if wm.powerlib_is_edit_mode else 'HAND')
+        row.operator("wm.powerlib_reload_from_json", text="", icon='FILE_REFRESH')
+
     def draw(self, context):
         wm = context.window_manager
 
         layout = self.layout
-
-        layout.operator("wm.powerlib_reload_from_json", icon="FILE_REFRESH")
 
         # Category selector
 
@@ -162,9 +168,10 @@ class ASSET_PT_powerlib(Panel):
             wm, "powerlib_cols",      # Collection to search
             text="", icon="QUESTION"# UI icon and label
         )
-        row.operator("render.preset_add", text="", icon='OUTLINER_DATA_FONT')
-        row.operator("render.preset_add", text="", icon='ZOOMIN')
-        row.operator("render.preset_add", text="", icon='ZOOMOUT')
+        if wm.powerlib_is_edit_mode:
+            row.operator("render.preset_add", text="", icon='OUTLINER_DATA_FONT')
+            row.operator("render.preset_add", text="", icon='ZOOMIN')
+            row.operator("render.preset_add", text="", icon='ZOOMOUT')
 
         # UI List with the assets of the selected category
 
@@ -175,13 +182,14 @@ class ASSET_PT_powerlib(Panel):
                "ASSET_UL_collection_assets", "", # type and unique id
                 asset_collection, "assets",      # pointer to the CollectionProperty
                 asset_collection, "active_asset",# pointer to the active identifier
-                rows=4,
+                rows=14,
             )
             # add/remove/specials UI list Menu
-            col = row.column(align=True)
-            col.operator("wm.powerlib_assetlist_add", icon='ZOOMIN', text="")
-            col.operator("wm.powerlib_assetlist_del", icon='ZOOMOUT', text="")
-            #col.menu("ASSET_MT_powerlib_assetlist_specials", icon='DOWNARROW_HLT', text="")
+            if wm.powerlib_is_edit_mode:
+                col = row.column(align=True)
+                col.operator("wm.powerlib_assetlist_add", icon='ZOOMIN', text="")
+                col.operator("wm.powerlib_assetlist_del", icon='ZOOMOUT', text="")
+                #col.menu("ASSET_MT_powerlib_assetlist_specials", icon='DOWNARROW_HLT', text="")
         else:
             row.enabled = False
             row.label("No Asset Collection Selected")
@@ -193,6 +201,12 @@ class ASSET_PT_powerlib(Panel):
 def register():
 
     bpy.utils.register_module(__name__)
+
+    bpy.types.WindowManager.powerlib_is_edit_mode = BoolProperty(
+        name="",
+        description="",
+        default=False,
+    )
 
     bpy.types.WindowManager.powerlib_cols = CollectionProperty(
         name="Powerlib Add-on ColProperties",
@@ -214,6 +228,7 @@ def unregister():
 
     del bpy.types.WindowManager.powerlib_active_col
     del bpy.types.WindowManager.powerlib_cols
+    del bpy.types.WindowManager.powerlib_is_edit_mode
 
     bpy.utils.unregister_module(__name__)
 
