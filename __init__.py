@@ -109,6 +109,33 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         # todo verify, clear, frees nested, default value for asset active?
         return {'FINISHED'}
 
+class ASSET_OT_powerlib_collection_rename(Operator):
+    bl_idname = "wm.powerlib_collection_rename"
+    bl_label = "Rename Collection"
+    bl_description = "Renames the asset collection"
+    bl_options = {'UNDO', 'REGISTER'}
+
+    name = StringProperty(name="Name", description="Name of the collection")
+
+    @classmethod
+    def poll(self, context):
+        wm = context.window_manager
+        return (wm.powerlib_active_col
+            and wm.powerlib_cols[wm.powerlib_active_col])
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        # fill in the field with the current value
+        self.name = wm.powerlib_cols[wm.powerlib_active_col].name
+        return wm.invoke_props_dialog(self)
+
+    def execute(self, context):
+        wm = context.window_manager
+        col = wm.powerlib_cols[wm.powerlib_active_col]
+        col.name = self.name
+        wm.powerlib_active_col = self.name
+        return {'FINISHED'}
+
 
 class ASSET_OT_powerlib_assetlist_add(Operator):
     bl_idname = "wm.powerlib_assetlist_add"
@@ -169,7 +196,7 @@ class ASSET_PT_powerlib(Panel):
             text="", icon="QUESTION"# UI icon and label
         )
         if wm.powerlib_is_edit_mode:
-            row.operator("render.preset_add", text="", icon='OUTLINER_DATA_FONT')
+            row.operator("wm.powerlib_collection_rename", text="", icon='OUTLINER_DATA_FONT')
             row.operator("render.preset_add", text="", icon='ZOOMIN')
             row.operator("render.preset_add", text="", icon='ZOOMOUT')
 
