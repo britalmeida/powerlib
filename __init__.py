@@ -60,6 +60,16 @@ with open(os.path.join(os.path.dirname(__file__), "lib.json")) as data_file:
 
 # Data Structure ##############################################################
 
+class AssetItemComponents(PropertyGroup):
+    """The components that build an asset (groups, group_reference_objects,
+        scripts).
+    """
+    component_type = StringProperty(
+        name="",
+        description=""
+    )
+
+
 class AssetItem(PropertyGroup):
     name = StringProperty(
         name="",
