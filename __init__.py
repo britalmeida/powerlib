@@ -141,14 +141,15 @@ class ASSET_OT_powerlib_save_to_json(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        with open(os.path.join(os.path.dirname(__file__), "lib.json")) as data_file:
-            col_json_dict = {}
+        with open(os.path.join(os.path.dirname(__file__), 'lib.json'), 'w') as data_file:
+            collections_json_dict = {}
             for col in wm.powerlib_cols:
                 assets_json_dict = {}
                 for asset in col.assets:
                     assets_json_dict[asset.name] = {} # todo to be continued
-                col_json_dict[col.name] = assets_json_dict
-                print(json.dumps(col_json_dict, indent=4)) #sorted_keys=True  ## TODO!!
+                collections_json_dict[col.name] = assets_json_dict
+            print(json.dumps(collections_json_dict, indent=4)) #sorted_keys=True  ## TODO!!
+            #json.dump(collections_json_dict, data_file, indent=4, sort_keys=False,)
         return {'FINISHED'}
 
 
