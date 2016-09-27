@@ -93,6 +93,7 @@ class ColRequiredOperator(Operator):
         return (wm.powerlib_active_col
             and wm.powerlib_cols[wm.powerlib_active_col])
 
+
 class ColAndAssetRequiredOperator(ColRequiredOperator):
     @classmethod
     def poll(self, context):
@@ -102,6 +103,7 @@ class ColAndAssetRequiredOperator(ColRequiredOperator):
             return (col.active_asset < len(col.assets)
                 and col.active_asset >= 0)
         return False
+
 
 class ASSET_OT_powerlib_reload_from_json(Operator):
     bl_idname = "wm.powerlib_reload_from_json"
@@ -125,6 +127,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                 # TODO to be continued
         # todo verify, clear, frees nested, default value for asset active?
         return {'FINISHED'}
+
 
 class ASSET_OT_powerlib_save_to_json(Operator):
     bl_idname = "wm.powerlib_save_to_json"
@@ -170,6 +173,7 @@ class ASSET_OT_powerlib_collection_rename(ColRequiredOperator):
         wm.powerlib_active_col = self.name
         return {'FINISHED'}
 
+
 class ASSET_OT_powerlib_collection_add(Operator):
     bl_idname = "wm.powerlib_collection_add"
     bl_label = "Add Collection"
@@ -189,6 +193,7 @@ class ASSET_OT_powerlib_collection_add(Operator):
         wm.powerlib_active_col = self.name
         return {'FINISHED'}
 
+
 class ASSET_OT_powerlib_collection_del(ColRequiredOperator):
     bl_idname = "wm.powerlib_collection_del"
     bl_label = "Delete Collection"
@@ -201,6 +206,7 @@ class ASSET_OT_powerlib_collection_del(ColRequiredOperator):
         wm.powerlib_cols.remove(idx)
         wm.powerlib_active_col = ""
         return {'FINISHED'}
+
 
 class ASSET_OT_powerlib_assetlist_add(ColRequiredOperator):
     bl_idname = "wm.powerlib_assetlist_add"
@@ -238,6 +244,7 @@ class ASSET_OT_powerlib_assetlist_add(ColRequiredOperator):
         col.active_asset = len(col.assets) - 1
 
         return {'FINISHED'}
+
 
 class ASSET_OT_powerlib_assetlist_del(ColAndAssetRequiredOperator):
     bl_idname = "wm.powerlib_assetlist_del"
