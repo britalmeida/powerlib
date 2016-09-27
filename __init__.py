@@ -329,9 +329,10 @@ class ASSET_PT_powerlib(Panel):
             row.enabled = False
             row.label("No Asset Collection Selected")
 
-        layout.separator()
-        row = layout.row()
-        row.operator("wm.powerlib_save_to_json", icon='FILE_REFRESH')
+        if wm.powerlib_is_edit_mode:
+            layout.separator()
+            row = layout.row()
+            row.operator("wm.powerlib_save_to_json", icon='FILE_REFRESH')
 
 
 
