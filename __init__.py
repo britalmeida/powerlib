@@ -79,8 +79,8 @@ class AssetItemComponents(PropertyGroup):
     """
     component_type = EnumProperty(
         items=(
-            ('INSTANCE_GROUPS', "Instance Group", ""),
-            ('NONINSTANCE_GROUPS', "Non Intance Group", ""),
+            ('INSTANCE_GROUPS', "Instance Groups", ""),
+            ('NONINSTANCE_GROUPS', "Non Instance Groups", ""),
             ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", ""),
             ),
         default='INSTANCE_GROUPS',
@@ -97,8 +97,8 @@ class AssetItemComponents(PropertyGroup):
     @staticmethod
     def getComponentType(name):
         lookup = {
-        'instance_group': 'INSTANCE_GROUPS',
-        'noninstance_group': 'NONINSTANCE_GROUPS',
+        'instance_groups': 'INSTANCE_GROUPS',
+        'noninstance_groups': 'NONINSTANCE_GROUPS',
         'group_reference_objects': 'GROUP_REFERENCE_OBJECTS', 
         }
 
@@ -142,7 +142,7 @@ class ColRequiredOperator(Operator):
     def poll(self, context):
         wm = context.window_manager
         return (wm.powerlib_active_col
-            and wm.powerlib_cols[wm.powerlib_active_col])
+            and wm.powerlib_collections[wm.powerlib_active_col])
 
 
 class ColAndAssetRequiredOperator(ColRequiredOperator):
@@ -150,7 +150,7 @@ class ColAndAssetRequiredOperator(ColRequiredOperator):
     def poll(self, context):
         if super().poll(context):
             wm = context.window_manager
-            col = wm.powerlib_cols[wm.powerlib_active_col]
+            col = wm.powerlib_collections[wm.powerlib_active_col]
             return (col.active_asset < len(col.assets)
                 and col.active_asset >= 0)
         return False
@@ -168,11 +168,11 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        wm.powerlib_cols.clear()
+        wm.powerlib_collections.clear()
 
         # Characters
         for col_name in asset_categories:
-            asset_collection_prop = wm.powerlib_cols.add()
+            asset_collection_prop = wm.powerlib_collections.add()
             asset_collection_prop.name = col_name
 
             # Boris
@@ -209,7 +209,7 @@ class ASSET_OT_powerlib_save_to_json(Operator):
         wm = context.window_manager
         with open(os.path.join(os.path.dirname(__file__), 'lib.json'), 'w') as data_file:
             collections_json_dict = {}
-            for col in wm.powerlib_cols:
+            for col in wm.powerlib_collections:
                 assets_json_dict = {}
                 for asset in col.assets:
                     assets_json_dict[asset.name] = {} # todo to be continued
@@ -230,12 +230,12 @@ class ASSET_OT_powerlib_collection_rename(ColRequiredOperator):
     def invoke(self, context, event):
         wm = context.window_manager
         # fill in the field with the current value
-        self.name = wm.powerlib_cols[wm.powerlib_active_col].name
+        self.name = wm.powerlib_collections[wm.powerlib_active_col].name
         return wm.invoke_props_dialog(self)
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_cols[wm.powerlib_active_col]
+        col = wm.powerlib_collections[wm.powerlib_active_col]
         col.name = self.name
         wm.powerlib_active_col = self.name
         return {'FINISHED'}
@@ -255,7 +255,7 @@ class ASSET_OT_powerlib_collection_add(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_cols.add()
+        col = wm.powerlib_collections.add()
         col.name = self.name
         wm.powerlib_active_col = self.name
         return {'FINISHED'}
@@ -269,8 +269,8 @@ class ASSET_OT_powerlib_collection_del(ColRequiredOperator):
 
     def execute(self, context):
         wm = context.window_manager
-        idx = wm.powerlib_cols.find(wm.powerlib_active_col)
-        wm.powerlib_cols.remove(idx)
+        idx = wm.powerlib_collections.find(wm.powerlib_active_col)
+        wm.powerlib_collections.remove(idx)
         wm.powerlib_active_col = ""
         return {'FINISHED'}
 
@@ -283,7 +283,7 @@ class ASSET_OT_powerlib_assetlist_add(ColRequiredOperator):
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_cols[wm.powerlib_active_col]
+        col = wm.powerlib_collections[wm.powerlib_active_col]
 
         asset = col.assets.add()
 
@@ -321,7 +321,7 @@ class ASSET_OT_powerlib_assetlist_del(ColAndAssetRequiredOperator):
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_cols[wm.powerlib_active_col]
+        col = wm.powerlib_collections[wm.powerlib_active_col]
 
         col.assets.remove(col.active_asset)
 
@@ -367,7 +367,7 @@ class ASSET_PT_powerlib(Panel):
         row = layout.row(align=True)
         row.prop_search(
             wm, "powerlib_active_col",# Currently active
-            wm, "powerlib_cols",      # Collection to search
+            wm, "powerlib_collections",      # Collection to search
             text="", icon="QUESTION"# UI icon and label
         )
         if wm.powerlib_is_edit_mode:
@@ -379,7 +379,7 @@ class ASSET_PT_powerlib(Panel):
 
         row = layout.row()
         if (wm.powerlib_active_col):
-            asset_collection = wm.powerlib_cols[wm.powerlib_active_col]
+            asset_collection = wm.powerlib_collections[wm.powerlib_active_col]
             row.template_list(
                "ASSET_UL_collection_assets", "", # type and unique id
                 asset_collection, "assets",      # pointer to the CollectionProperty
@@ -431,8 +431,8 @@ def register():
         default=False,
     )
 
-    bpy.types.WindowManager.powerlib_cols = CollectionProperty(
-        name="Powerlib Add-on ColProperties",
+    bpy.types.WindowManager.powerlib_collections = CollectionProperty(
+        name="Powerlib Add-on CollectionProperties",
         description="Properties and data used by the Powerlib Add-on",
         type=AssetCollection,
     )
@@ -450,7 +450,7 @@ def register():
 def unregister():
 
     del bpy.types.WindowManager.powerlib_active_col
-    del bpy.types.WindowManager.powerlib_cols
+    del bpy.types.WindowManager.powerlib_collections
     del bpy.types.WindowManager.powerlib_is_edit_mode
 
     for cls in classes:
