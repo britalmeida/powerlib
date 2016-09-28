@@ -60,14 +60,52 @@ with open(os.path.join(os.path.dirname(__file__), "lib.json")) as data_file:
 
 # Data Structure ##############################################################
 
+class AssetItemComponent(PropertyGroup):
+    name = StringProperty(
+        name="",
+        description="",
+    )
+
+    filepath = StringProperty(
+        name="",
+        description="",
+        subtype='FILE_PATH',
+    )
+
+
 class AssetItemComponents(PropertyGroup):
     """The components that build an asset (groups, group_reference_objects,
         scripts).
     """
-    component_type = StringProperty(
+    component_type = EnumProperty(
+        items=(
+            ('INSTANCE_GROUPS', "Instance Group", ""),
+            ('NONINSTANCE_GROUPS', "Non Intance Group", ""),
+            ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", ""),
+            ),
+        default='INSTANCE_GROUPS',
         name="",
-        description=""
+        description="",
     )
+
+    components = CollectionProperty(
+        name='',
+        description='',
+        type=AssetItemComponent,
+    )
+
+    @staticmethod
+    def getComponentType(name):
+        lookup = {
+        'instance_group': 'INSTANCE_GROUPS',
+        'noninstance_group': 'NONINSTANCE_GROUPS',
+        'group_reference_objects': 'GROUP_REFERENCE_OBJECTS', 
+        }
+
+        value = lookup.get(name)
+        if value is None:
+            raise Exception("Component type not supported: {0}".format(name))
+        return value
 
 
 class AssetItem(PropertyGroup):
@@ -75,6 +113,9 @@ class AssetItem(PropertyGroup):
         name="",
         description="",
     )
+    items = CollectionProperty(
+        name='',
+        type=AssetItemComponents)
     # type = enum?
 
 
@@ -128,13 +169,28 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
     def execute(self, context):
         wm = context.window_manager
         wm.powerlib_cols.clear()
+
+        # Characters
         for col_name in asset_categories:
             asset_collection_prop = wm.powerlib_cols.add()
             asset_collection_prop.name = col_name
+
+            # Boris
             for asset_name, asset_def in asset_categories[col_name].items():
                 asset_prop = asset_collection_prop.assets.add()
                 asset_prop.name = asset_name
-                # TODO to be continued
+
+                # group
+                for item_name, item_def in asset_def.items():
+                    item_prop = asset_prop.items.add()
+                    item_prop.component_type = item_prop.getComponentType(item_name)
+
+                    # filepath, name
+                    for filepath, name in item_def:
+                        asset_item = item_prop.components.add()
+                        asset_item.name = name
+                        asset_item.filepath = filepath
+ 
         # todo verify, clear, frees nested, default value for asset active?
         return {'FINISHED'}
 
@@ -350,6 +406,8 @@ class ASSET_PT_powerlib(Panel):
 # Registry ####################################################################
 
 classes = (
+    AssetItemComponent,
+    AssetItemComponents,
     AssetItem,
     AssetCollection,
     ASSET_UL_collection_assets,
