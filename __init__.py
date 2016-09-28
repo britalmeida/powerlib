@@ -97,9 +97,9 @@ class AssetItemComponents(PropertyGroup):
     @staticmethod
     def getComponentType(name):
         lookup = {
-        'instance_groups': 'INSTANCE_GROUPS',
-        'noninstance_groups': 'NONINSTANCE_GROUPS',
-        'group_reference_objects': 'GROUP_REFERENCE_OBJECTS', 
+            'instance_groups': 'INSTANCE_GROUPS',
+            'noninstance_groups': 'NONINSTANCE_GROUPS',
+            'group_reference_objects': 'GROUP_REFERENCE_OBJECTS', 
         }
 
         value = lookup.get(name)
@@ -116,7 +116,6 @@ class AssetItem(PropertyGroup):
     items = CollectionProperty(
         name='',
         type=AssetItemComponents)
-    # type = enum?
 
 
 class AssetCollection(PropertyGroup):
@@ -171,22 +170,22 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         wm.powerlib_collections.clear()
 
         # Characters
-        for col_name in asset_categories:
+        for collection_name in asset_categories:
             asset_collection_prop = wm.powerlib_collections.add()
-            asset_collection_prop.name = col_name
+            asset_collection_prop.name = collection_name
 
             # Boris
-            for asset_name, asset_def in asset_categories[col_name].items():
+            for asset_name, asset_items in asset_categories[collection_name].items():
                 asset_prop = asset_collection_prop.assets.add()
                 asset_prop.name = asset_name
 
-                # group
-                for item_name, item_def in asset_def.items():
+                # instance_groups
+                for item_name, item_components in asset_items.items():
                     item_prop = asset_prop.items.add()
                     item_prop.component_type = item_prop.getComponentType(item_name)
 
                     # filepath, name
-                    for filepath, name in item_def:
+                    for filepath, name in item_components:
                         asset_item = item_prop.components.add()
                         asset_item.name = name
                         asset_item.filepath = filepath
@@ -209,13 +208,25 @@ class ASSET_OT_powerlib_save_to_json(Operator):
         wm = context.window_manager
         with open(os.path.join(os.path.dirname(__file__), 'lib.json'), 'w') as data_file:
             collections_json_dict = {}
-            for col in wm.powerlib_collections:
+            # Characters
+            for collection in wm.powerlib_collections:
                 assets_json_dict = {}
-                for asset in col.assets:
-                    assets_json_dict[asset.name] = {} # todo to be continued
-                collections_json_dict[col.name] = assets_json_dict
-            print(json.dumps(collections_json_dict, indent=4)) #sorted_keys=True  ## TODO!!
-            #json.dump(collections_json_dict, data_file, indent=4, sort_keys=False,)
+
+                # Boris
+                for asset_name, asset_items in collection.assets.items():
+                    assets_json_dict[asset_name] = {}
+
+                    # instance_groups
+                    for item_components in asset_items.items:
+                        component_type = item_components.component_type.lower()
+                        assets_json_dict[asset_name][component_type] = []
+
+                        for i in item_components.components:
+                            assets_json_dict[asset_name][component_type].append([
+                                i.filepath, i.name])
+                collections_json_dict[collection.name] = assets_json_dict
+            # print(json.dumps(collections_json_dict, indent=4, sort_keys=True,))
+            json.dump(collections_json_dict, data_file, indent=4, sort_keys=True,)
         return {'FINISHED'}
 
 

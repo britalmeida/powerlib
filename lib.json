@@ -1,17 +1,17 @@
 {
     "Characters": {
-        "Boris": {
-            "group": [
+        "Agent": {
+            "instance_groups": [
                 [
-                    "./char/Boris Kloris - WIP.blend",
+                    "./char/Agent327- WIP.blend",
                     "Boris"
                 ]
             ]
         },
-        "Agent": {
-            "group": [
+        "Boris": {
+            "instance_groups": [
                 [
-                    "./char/Agent327- WIP.blend",
+                    "./char/Boris Kloris - WIP.blend",
                     "Boris"
                 ]
             ]
@@ -19,7 +19,7 @@
     },
     "Sets": {
         "barbershop": {
-            "link_objects": [
+            "instance_groups": [
                 [
                     "./scenes/01_barbershop.blend",
                     "chair"
