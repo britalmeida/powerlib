@@ -222,7 +222,8 @@ class ASSET_OT_powerlib_save_to_json(Operator):
                     # instance_groups
                     for item_components in asset_items.items:
                         component_type = item_components.component_type.lower()
-                        assets_json_dict[asset_name][component_type] = []
+                        if component_type not in assets_json_dict[asset_name]:
+                            assets_json_dict[asset_name][component_type] = []
 
                         for i in item_components.components:
                             assets_json_dict[asset_name][component_type].append([
@@ -376,8 +377,6 @@ class ASSET_OT_powerlib_assetitemcomponent_del(ColAndAssetRequiredOperator):
     bl_description = "Delete the selected asset component"
     bl_options = {'UNDO', 'REGISTER'}
 
-    component_type = component_type
-
     item_index = IntProperty(
         name="Index in the list",
         default=0,
@@ -388,7 +387,7 @@ class ASSET_OT_powerlib_assetitemcomponent_del(ColAndAssetRequiredOperator):
 
         asset_collection = wm.powerlib_collections[wm.powerlib_active_col]
         active_asset = asset_collection.assets[asset_collection.active_asset]
-        print(active_asset.items[self.component_type.lower()])
+        active_asset.items.remove(self.item_index)
 
         return {'FINISHED'}
 
@@ -462,12 +461,12 @@ class ASSET_PT_powerlib(Panel):
             for item_components in active_asset.items:
                 row = layout.row()
                 row.label(item_components.component_type)
-                for i in item_components.components:
+                for idx, i in enumerate(item_components.components):
                     row = layout.row()
                     row.prop(i, "filepath")
                     row.prop(i, "name")
                     op = row.operator("wm.powerlib_assetitemcomponent_del", text="", icon='FILE_REFRESH')
-                    # op.item_index = 1
+                    op.item_index = idx
 
 
 
