@@ -206,7 +206,8 @@ class ASSET_OT_powerlib_save_to_json(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        with open(os.path.join(os.path.dirname(__file__), 'lib.json'), 'w') as data_file:
+        with open(os.path.join(
+            os.path.dirname(__file__), 'lib.json'), 'w') as data_file:
             collections_json_dict = {}
             # Characters
             for collection in wm.powerlib_collections:
@@ -395,7 +396,7 @@ class ASSET_PT_powerlib(Panel):
                "ASSET_UL_collection_assets", "", # type and unique id
                 asset_collection, "assets",      # pointer to the CollectionProperty
                 asset_collection, "active_asset",# pointer to the active identifier
-                rows=14,
+                rows=6,
             )
             # add/remove/specials UI list Menu
             if wm.powerlib_is_edit_mode:
@@ -406,12 +407,23 @@ class ASSET_PT_powerlib(Panel):
         else:
             row.enabled = False
             row.label("No Asset Collection Selected")
-
-        if wm.powerlib_is_edit_mode:
+        
+        if (wm.powerlib_active_col) and wm.powerlib_is_edit_mode:
+            active_asset = asset_collection.assets[asset_collection.active_asset]
             layout.separator()
             row = layout.row()
+            for item_components in active_asset.items:
+                row.label(item_components.component_type)
+                for i in item_components.components:
+                    row = layout.row()
+                    row.prop(i, "filepath")
+                    row = layout.row()
+                    row.prop(i, "name")
+        
+        layout.separator()
+        row = layout.row()       
+        if wm.powerlib_is_edit_mode:
             row.operator("wm.powerlib_save_to_json", icon='FILE_REFRESH')
-
 
 
 # Registry ####################################################################
