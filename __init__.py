@@ -51,6 +51,17 @@ from bpy.props import (
     PointerProperty,
 )
 
+component_type = EnumProperty(
+    items=(
+        ('INSTANCE_GROUPS', "Instance Groups", ""),
+        ('NONINSTANCE_GROUPS', "Non Instance Groups", ""),
+        ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", ""),
+        ),
+    default='INSTANCE_GROUPS',
+    name="Component Type",
+    description="",
+)
+
 
 # load single json library file
 asset_categories = {}
@@ -77,16 +88,7 @@ class AssetItemComponents(PropertyGroup):
     """The components that build an asset (groups, group_reference_objects,
         scripts).
     """
-    component_type = EnumProperty(
-        items=(
-            ('INSTANCE_GROUPS', "Instance Groups", ""),
-            ('NONINSTANCE_GROUPS', "Non Instance Groups", ""),
-            ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", ""),
-            ),
-        default='INSTANCE_GROUPS',
-        name="",
-        description="",
-    )
+    component_type = component_type
 
     components = CollectionProperty(
         name='',
@@ -99,7 +101,7 @@ class AssetItemComponents(PropertyGroup):
         lookup = {
             'instance_groups': 'INSTANCE_GROUPS',
             'noninstance_groups': 'NONINSTANCE_GROUPS',
-            'group_reference_objects': 'GROUP_REFERENCE_OBJECTS', 
+            'group_reference_objects': 'GROUP_REFERENCE_OBJECTS',
         }
 
         value = lookup.get(name)
@@ -189,7 +191,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                         asset_item = item_prop.components.add()
                         asset_item.name = name
                         asset_item.filepath = filepath
- 
+
         # todo verify, clear, frees nested, default value for asset active?
         return {'FINISHED'}
 
@@ -344,6 +346,52 @@ class ASSET_OT_powerlib_assetitem_del(ColAndAssetRequiredOperator):
 
         return {'FINISHED'}
 
+
+class ASSET_OT_powerlib_assetitemcomponent_add(ColAndAssetRequiredOperator):
+    bl_idname = "wm.powerlib_assetitemcomponent_add"
+    bl_label = "Add Asset Component"
+    bl_description = "Add a new component to the selected asset"
+    bl_options = {'UNDO', 'REGISTER'}
+
+    component_type = component_type
+
+    def invoke(self, context, event):
+        wm = context.window_manager
+        return wm.invoke_props_dialog(self)
+
+    def execute(self, context):
+        wm = context.window_manager
+        asset_collection = wm.powerlib_collections[wm.powerlib_active_col]
+        active_asset = asset_collection.assets[asset_collection.active_asset]
+        item_prop = active_asset.items.add()
+        item_prop.component_type = item_prop.getComponentType(self.component_type.lower())
+        item_prop.components.add()
+
+        return {'FINISHED'}
+
+
+class ASSET_OT_powerlib_assetitemcomponent_del(ColAndAssetRequiredOperator):
+    bl_idname = "wm.powerlib_assetitemcomponent_del"
+    bl_label = "Delete Asset Component"
+    bl_description = "Delete the selected asset component"
+    bl_options = {'UNDO', 'REGISTER'}
+
+    component_type = component_type
+
+    item_index = IntProperty(
+        name="Index in the list",
+        default=0,
+    )
+
+    def execute(self, context):
+        wm = context.window_manager
+
+        asset_collection = wm.powerlib_collections[wm.powerlib_active_col]
+        active_asset = asset_collection.assets[asset_collection.active_asset]
+        print(active_asset.items[self.component_type.lower()])
+
+        return {'FINISHED'}
+
 # Panel #######################################################################
 
 class ASSET_UL_collection_assets(UIList):
@@ -407,22 +455,27 @@ class ASSET_PT_powerlib(Panel):
         else:
             row.enabled = False
             row.label("No Asset Collection Selected")
-        
+
         if (wm.powerlib_active_col) and wm.powerlib_is_edit_mode:
             active_asset = asset_collection.assets[asset_collection.active_asset]
             layout.separator()
-            row = layout.row()
             for item_components in active_asset.items:
+                row = layout.row()
                 row.label(item_components.component_type)
                 for i in item_components.components:
                     row = layout.row()
                     row.prop(i, "filepath")
-                    row = layout.row()
                     row.prop(i, "name")
-        
-        layout.separator()
-        row = layout.row()       
+                    op = row.operator("wm.powerlib_assetitemcomponent_del", text="", icon='FILE_REFRESH')
+                    # op.item_index = 1
+
+
+
         if wm.powerlib_is_edit_mode:
+            layout.separator()
+            row = layout.row()
+            row.operator("wm.powerlib_assetitemcomponent_add", icon='ZOOMIN')
+            row = layout.row()
             row.operator("wm.powerlib_save_to_json", icon='FILE_REFRESH')
 
 
@@ -442,6 +495,8 @@ classes = (
     ASSET_OT_powerlib_collection_del,
     ASSET_OT_powerlib_assetitem_add,
     ASSET_OT_powerlib_assetitem_del,
+    ASSET_OT_powerlib_assetitemcomponent_add,
+    ASSET_OT_powerlib_assetitemcomponent_del,
 )
 
 def register():
