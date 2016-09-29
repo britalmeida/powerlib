@@ -287,8 +287,8 @@ class ASSET_OT_powerlib_collection_del(ColRequiredOperator):
         return {'FINISHED'}
 
 
-class ASSET_OT_powerlib_assetlist_add(ColRequiredOperator):
-    bl_idname = "wm.powerlib_assetlist_add"
+class ASSET_OT_powerlib_assetitem_add(ColRequiredOperator):
+    bl_idname = "wm.powerlib_assetitem_add"
     bl_label = "Add Asset"
     bl_description = "Add a new asset to the selected collection"
     bl_options = {'UNDO', 'REGISTER'}
@@ -306,8 +306,8 @@ class ASSET_OT_powerlib_assetlist_add(ColRequiredOperator):
         else:
             sorted_assets = []
             for a in col.assets:
-                if a.name.startswith(default_name+"."):
-                    index = a.name[len(default_name)+1:]
+                if a.name.startswith(default_name + "."):
+                    index = a.name[len(default_name) + 1:]
                     if index.isdigit():
                         sorted_assets.append(index)
             sorted_assets = sorted(sorted_assets)
@@ -325,8 +325,8 @@ class ASSET_OT_powerlib_assetlist_add(ColRequiredOperator):
         return {'FINISHED'}
 
 
-class ASSET_OT_powerlib_assetlist_del(ColAndAssetRequiredOperator):
-    bl_idname = "wm.powerlib_assetlist_del"
+class ASSET_OT_powerlib_assetitem_del(ColAndAssetRequiredOperator):
+    bl_idname = "wm.powerlib_assetitem_del"
     bl_label = "Delete Asset"
     bl_description = "Delete the selected asset"
     bl_options = {'UNDO', 'REGISTER'}
@@ -401,8 +401,8 @@ class ASSET_PT_powerlib(Panel):
             # add/remove/specials UI list Menu
             if wm.powerlib_is_edit_mode:
                 col = row.column(align=True)
-                col.operator("wm.powerlib_assetlist_add", icon='ZOOMIN', text="")
-                col.operator("wm.powerlib_assetlist_del", icon='ZOOMOUT', text="")
+                col.operator("wm.powerlib_assetitem_add", icon='ZOOMIN', text="")
+                col.operator("wm.powerlib_assetitem_del", icon='ZOOMOUT', text="")
                 #col.menu("ASSET_MT_powerlib_assetlist_specials", icon='DOWNARROW_HLT', text="")
         else:
             row.enabled = False
@@ -440,8 +440,8 @@ classes = (
     ASSET_OT_powerlib_collection_rename,
     ASSET_OT_powerlib_collection_add,
     ASSET_OT_powerlib_collection_del,
-    ASSET_OT_powerlib_assetlist_add,
-    ASSET_OT_powerlib_assetlist_del,
+    ASSET_OT_powerlib_assetitem_add,
+    ASSET_OT_powerlib_assetitem_del,
 )
 
 def register():
