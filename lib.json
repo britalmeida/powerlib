@@ -32,7 +32,11 @@
             "instance_groups": [
                 [
                     "scenes/01_barbershop.blend",
-                    "Group"
+                    "Group01"
+                ],
+                [
+                    "scenes/02_barbershop.blend",
+                    "Group02"
                 ]
             ]
         }
