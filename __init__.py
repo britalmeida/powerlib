@@ -131,14 +131,34 @@ class AssetCollection(PropertyGroup):
     )
 
 
+class PowerProperties(PropertyGroup):
+    is_edit_mode = BoolProperty(
+        name="Is in Edit Mode",
+        description="Toggle for Edit/Selection mode",
+        default=False,
+    )
+
+    collections = CollectionProperty(
+        name="PowerLib Collections",
+        description="List of Asset Collections in the active library",
+        type=AssetCollection,
+    )
+
+    active_col = StringProperty(
+        name="Active Collection",
+        description="Currently selected collection",
+    )
+
+
 # Operators ###################################################################
 
 class ColRequiredOperator(Operator):
     @classmethod
     def poll(self, context):
         wm = context.window_manager
-        return (wm.powerlib_active_col
-            and wm.powerlib_collections[wm.powerlib_active_col])
+        active_col = wm.powerlib_props.active_collection
+        return (active_col
+            and wm.powerlib_props.collections[active_col])
 
 
 class ColAndAssetRequiredOperator(ColRequiredOperator):
@@ -146,7 +166,7 @@ class ColAndAssetRequiredOperator(ColRequiredOperator):
     def poll(self, context):
         if super().poll(context):
             wm = context.window_manager
-            col = wm.powerlib_collections[wm.powerlib_active_col]
+            col = wm.powerlib_props.collections[wm.powerlib_props.active_collection]
             return (col.active_asset < len(col.assets)
                 and col.active_asset >= 0)
         return False
@@ -164,7 +184,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        wm.powerlib_collections.clear()
+        wm.powerlib_props.collections.clear()
 
         # load single json library file
         library = {}
@@ -173,7 +193,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
 
         # Collections, eg. Characters
         for collection_name in library:
-            asset_collection_prop = wm.powerlib_collections.add()
+            asset_collection_prop = wm.powerlib_props.collections.add()
             asset_collection_prop.name = collection_name
 
             # Assets, eg. Boris
@@ -214,7 +234,7 @@ class ASSET_OT_powerlib_save_to_json(Operator):
             collections_json_dict = {}
 
             # Characters
-            for collection in wm.powerlib_collections:
+            for collection in wm.powerlib_props.collections:
                 assets_json_dict = {}
 
                 # Boris
@@ -247,14 +267,14 @@ class ASSET_OT_powerlib_collection_rename(ColRequiredOperator):
     def invoke(self, context, event):
         wm = context.window_manager
         # fill in the field with the current value
-        self.name = wm.powerlib_collections[wm.powerlib_active_col].name
+        self.name = wm.powerlib_props.collections[wm.powerlib_props.active_col].name
         return wm.invoke_props_dialog(self)
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_collections[wm.powerlib_active_col]
+        col = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         col.name = self.name
-        wm.powerlib_active_col = self.name
+        wm.powerlib_props.active_col = self.name
         return {'FINISHED'}
 
 
@@ -272,9 +292,9 @@ class ASSET_OT_powerlib_collection_add(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_collections.add()
+        col = wm.powerlib_props.collections.add()
         col.name = self.name
-        wm.powerlib_active_col = self.name
+        wm.powerlib_props.active_col = self.name
         return {'FINISHED'}
 
 
@@ -286,9 +306,9 @@ class ASSET_OT_powerlib_collection_del(ColRequiredOperator):
 
     def execute(self, context):
         wm = context.window_manager
-        idx = wm.powerlib_collections.find(wm.powerlib_active_col)
-        wm.powerlib_collections.remove(idx)
-        wm.powerlib_active_col = ""
+        idx = wm.powerlib_props.collections.find(wm.powerlib_props.active_col)
+        wm.powerlib_props.collections.remove(idx)
+        wm.powerlib_props.active_col = ""
         return {'FINISHED'}
 
 
@@ -300,7 +320,7 @@ class ASSET_OT_powerlib_assetitem_add(ColRequiredOperator):
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_collections[wm.powerlib_active_col]
+        col = wm.powerlib_props.collections[wm.powerlib_props.active_col]
 
         asset = col.assets.add()
 
@@ -338,7 +358,7 @@ class ASSET_OT_powerlib_assetitem_del(ColAndAssetRequiredOperator):
 
     def execute(self, context):
         wm = context.window_manager
-        col = wm.powerlib_collections[wm.powerlib_active_col]
+        col = wm.powerlib_props.collections[wm.powerlib_props.active_col]
 
         col.assets.remove(col.active_asset)
 
@@ -365,7 +385,7 @@ class ASSET_OT_powerlib_component_add(ColAndAssetRequiredOperator):
     def execute(self, context):
         wm = context.window_manager
 
-        asset_collection = wm.powerlib_collections[wm.powerlib_active_col]
+        asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         active_asset = asset_collection.assets[asset_collection.active_asset]
 
         components_of_type = active_asset.components_by_type.get(self.component_type.lower())
@@ -393,7 +413,7 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
     def execute(self, context):
         wm = context.window_manager
 
-        asset_collection = wm.powerlib_collections[wm.powerlib_active_col]
+        asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         active_asset = asset_collection.assets[asset_collection.active_asset]
         active_asset.components.remove(self.item_index)
 
@@ -421,11 +441,14 @@ class ASSET_PT_powerlib(Panel):
         wm = context.window_manager
 
         row = self.layout.row(align=True)
-        row.prop(wm, "powerlib_is_edit_mode", icon='GREASEPENCIL' if wm.powerlib_is_edit_mode else 'HAND')
+        row.prop(wm.powerlib_props, "is_edit_mode",
+            text="",
+            icon='GREASEPENCIL' if wm.powerlib_props.is_edit_mode else 'HAND')
         row.operator("wm.powerlib_reload_from_json", text="", icon='FILE_REFRESH')
 
     def draw(self, context):
         wm = context.window_manager
+        is_edit_mode = wm.powerlib_props.is_edit_mode
 
         layout = self.layout
 
@@ -433,11 +456,11 @@ class ASSET_PT_powerlib(Panel):
 
         row = layout.row(align=True)
         row.prop_search(
-            wm, "powerlib_active_col",  # Currently active
-            wm, "powerlib_collections", # Collection to search
+            wm.powerlib_props, "active_col",  # Currently active
+            wm.powerlib_props, "collections", # Collection to search
             text="", icon="QUESTION"    # UI icon and label
         )
-        if wm.powerlib_is_edit_mode:
+        if is_edit_mode:
             row.operator("wm.powerlib_collection_rename", text="", icon='OUTLINER_DATA_FONT')
             row.operator("wm.powerlib_collection_add", text="", icon='ZOOMIN')
             row.operator("wm.powerlib_collection_del", text="", icon='ZOOMOUT')
@@ -445,8 +468,8 @@ class ASSET_PT_powerlib(Panel):
         # UI List with the assets of the selected category
 
         row = layout.row()
-        if (wm.powerlib_active_col):
-            asset_collection = wm.powerlib_collections[wm.powerlib_active_col]
+        if (wm.powerlib_props.active_col):
+            asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
             row.template_list(
                "ASSET_UL_collection_assets", "", # type and unique id
                 asset_collection, "assets",      # pointer to the CollectionProperty
@@ -454,7 +477,7 @@ class ASSET_PT_powerlib(Panel):
                 rows=6,
             )
             # add/remove/specials UI list Menu
-            if wm.powerlib_is_edit_mode:
+            if is_edit_mode:
                 col = row.column(align=True)
                 col.operator("wm.powerlib_assetitem_add", icon='ZOOMIN', text="")
                 col.operator("wm.powerlib_assetitem_del", icon='ZOOMOUT', text="")
@@ -465,7 +488,7 @@ class ASSET_PT_powerlib(Panel):
 
         # Properties and Components of this Asset
 
-        if wm.powerlib_active_col:
+        if wm.powerlib_props.active_col:
             layout.separator()
             active_asset = asset_collection.assets[asset_collection.active_asset]
 
@@ -474,19 +497,19 @@ class ASSET_PT_powerlib(Panel):
                 row.label(components_of_type.component_type)
                 for idx, component in enumerate(components_of_type.components):
                     row = layout.row()
-                    row.enabled = wm.powerlib_is_edit_mode
+                    row.enabled = is_edit_mode
                     row.prop(component, "filepath", text="")
                     row.prop(component, "name", text="")
                     row.operator("wm.powerlib_component_del", text="", icon='X').item_index = idx
 
-        if wm.powerlib_is_edit_mode:
+        if is_edit_mode:
             layout.separator()
             row = layout.row()
             row.operator("wm.powerlib_component_add", icon='ZOOMIN')
 
         # Save
 
-        if wm.powerlib_is_edit_mode:
+        if is_edit_mode:
             layout.separator()
             row = layout.row()
             row.operator("wm.powerlib_save_to_json", icon='FILE_TICK')
@@ -499,6 +522,7 @@ classes = (
     ComponentsList,
     AssetItem,
     AssetCollection,
+    PowerProperties,
     ASSET_UL_collection_assets,
     ASSET_PT_powerlib,
     ASSET_OT_powerlib_reload_from_json,
@@ -516,33 +540,16 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
 
-    bpy.types.WindowManager.powerlib_is_edit_mode = BoolProperty(
-        name="",
-        description="",
-        default=False,
-    )
-
-    bpy.types.WindowManager.powerlib_collections = CollectionProperty(
-        name="Powerlib Add-on CollectionProperties",
+    bpy.types.WindowManager.powerlib_props = PointerProperty(
+        name="Powerlib Add-on Properties",
         description="Properties and data used by the Powerlib Add-on",
-        type=AssetCollection,
+        type=PowerProperties,
     )
-
-    bpy.types.WindowManager.powerlib_active_col = StringProperty(
-        name="",
-        description="",
-    )
-    # could be pointer instead of string?
-    #PointerProperty(type=AssetCollection, options={'EDITABLE'}) # needs PROP_EDITABLE but it's not exposed yet?
-    # Sev pointed to:
-    # https://www.blender.org/api/blender_python_api_current/bpy.types.Property.html#bpy.types.Property.is_readonly
 
 
 def unregister():
 
-    del bpy.types.WindowManager.powerlib_active_col
-    del bpy.types.WindowManager.powerlib_collections
-    del bpy.types.WindowManager.powerlib_is_edit_mode
+    del bpy.types.WindowManager.powerlib_props
 
     for cls in classes:
         bpy.utils.unregister_class(cls)
