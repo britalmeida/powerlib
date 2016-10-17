@@ -156,7 +156,7 @@ class ColRequiredOperator(Operator):
     @classmethod
     def poll(self, context):
         wm = context.window_manager
-        active_col = wm.powerlib_props.active_collection
+        active_col = wm.powerlib_props.active_col
         return (active_col
             and wm.powerlib_props.collections[active_col])
 
@@ -166,7 +166,7 @@ class ColAndAssetRequiredOperator(ColRequiredOperator):
     def poll(self, context):
         if super().poll(context):
             wm = context.window_manager
-            col = wm.powerlib_props.collections[wm.powerlib_props.active_collection]
+            col = wm.powerlib_props.collections[wm.powerlib_props.active_col]
             return (col.active_asset < len(col.assets)
                 and col.active_asset >= 0)
         return False
@@ -184,11 +184,14 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
 
     def execute(self, context):
         wm = context.window_manager
+
         wm.powerlib_props.collections.clear()
 
         # load single json library file
         library = {}
-        with open(os.path.join(os.path.dirname(__file__), "lib.json")) as data_file:
+        library_path = bpy.path.abspath(context.scene.lib_path)
+        print("PowerLib2: Reading JSON library file from %s", library_path)
+        with open(library_path) as data_file:
             library = json.load(data_file)
 
         # Collections, eg. Characters
@@ -232,8 +235,10 @@ class ASSET_OT_powerlib_save_to_json(Operator):
 
     def execute(self, context):
         wm = context.window_manager
-        with open(os.path.join(
-            os.path.dirname(__file__), 'lib.json'), 'w') as data_file:
+
+        library_path = bpy.path.abspath(context.scene.lib_path)
+        print("PowerLib2: Saving JSON library to file %s", library_path)
+        with open(library_path, 'w') as data_file:
             collections_json_dict = {}
 
             # Characters
@@ -451,13 +456,22 @@ class ASSET_PT_powerlib(Panel):
 
     def draw(self, context):
         wm = context.window_manager
-        is_edit_mode = wm.powerlib_props.is_edit_mode
+        scene = context.scene
 
+        is_edit_mode = wm.powerlib_props.is_edit_mode
         layout = self.layout
+
+        # Setting for the JSON library path
+
+        if is_edit_mode:
+            row = layout.row()
+            row.prop(scene, "lib_path", text="Library Path")
+            layout.separator()
 
         # Category selector
 
         row = layout.row(align=True)
+
         row.prop_search(
             wm.powerlib_props, "active_col",  # Currently active
             wm.powerlib_props, "collections", # Collection to search
@@ -549,9 +563,16 @@ def register():
         type=PowerProperties,
     )
 
+    bpy.types.Scene.lib_path = StringProperty(
+        name="Powerlib Add-on Library Path",
+        description="Path to a PowerLib JSON file",
+        subtype='FILE_PATH',
+    )
+
 
 def unregister():
 
+    del bpy.types.Scene.lib_path
     del bpy.types.WindowManager.powerlib_props
 
     for cls in classes:
