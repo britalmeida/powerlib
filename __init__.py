@@ -214,6 +214,9 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                         component_prop.id = name
                         component_prop.filepath = filepath
 
+        # Assign some collection by default (dictionaries are unordered)
+        wm.powerlib_props.active_col = next(iter(library.keys()))
+
         return {'FINISHED'}
 
 
@@ -423,7 +426,7 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
 
 class ASSET_UL_collection_assets(UIList):
     def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-        layout.prop(set, "name", text="", icon='QUESTION', emboss=False)
+        layout.prop(set, "name", text="", icon='LINK_BLEND', emboss=False)
 
 
 class ASSET_PT_powerlib(Panel):
@@ -458,7 +461,7 @@ class ASSET_PT_powerlib(Panel):
         row.prop_search(
             wm.powerlib_props, "active_col",  # Currently active
             wm.powerlib_props, "collections", # Collection to search
-            text="", icon="QUESTION"    # UI icon and label
+            text="", icon="EXPORT"    # UI icon and label
         )
         if is_edit_mode:
             row.operator("wm.powerlib_collection_rename", text="", icon='OUTLINER_DATA_FONT')
@@ -484,7 +487,7 @@ class ASSET_PT_powerlib(Panel):
                 #col.menu("ASSET_MT_powerlib_assetlist_specials", icon='DOWNARROW_HLT', text="")
         else:
             row.enabled = False
-            row.label("No Asset Collection Selected")
+            row.label("Choose an Asset Collection!")
 
         # Properties and Components of this Asset
 
