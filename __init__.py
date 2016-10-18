@@ -298,33 +298,44 @@ class ASSET_OT_powerlib_save_to_json(Operator):
     def execute(self, context):
         wm = context.window_manager
 
+        # Save properties to the JSON library file
+
         library_path = bpy.path.abspath(context.scene.lib_path)
-        print("PowerLib2: Saving JSON library to file %s", library_path)
+        print("PowerLib2: Saving JSON library to file %s" % library_path)
+
+        if not library_path or not os.path.exists(library_path):
+            print("PowerLib2: ... invalid filepath! Could not save!")
+            self.report({'ERROR'}, "Invalid path! Could not save!")
+            return {'FINISHED'}
+
+        collections_json_dict = {}
+
+        # Collections, eg. Characters
+        for collection in wm.powerlib_props.collections:
+            assets_json_dict = {}
+
+            # Assets, eg. Boris
+            for asset_name, asset_body in collection.assets.items():
+                comps_by_type_json_dict = {}
+
+                # Component Types, eg. instance_groups
+                for comp_type_name, comp_type_body in asset_body.components_by_type.items():
+                    comps_by_type_json_dict[comp_type_name] = []
+
+                    # Individual components of this type, each with filepath and name
+                    for i in comp_type_body.components:
+                        comps_by_type_json_dict[comp_type_name].append([
+                            i.filepath, i.name
+                        ])
+
+                assets_json_dict[asset_name] = comps_by_type_json_dict
+            collections_json_dict[collection.name] = assets_json_dict
+
         with open(library_path, 'w') as data_file:
-            collections_json_dict = {}
-
-            # Characters
-            for collection in wm.powerlib_props.collections:
-                assets_json_dict = {}
-
-                # Boris
-                for asset_name, asset_items in collection.assets.items():
-                    assets_json_dict[asset_name] = {}
-
-                    # instance_groups
-                    for item_component in asset_items.components:
-                        component_type = item_component.component_type.lower()
-                        if component_type not in assets_json_dict[asset_name]:
-                            assets_json_dict[asset_name][component_type] = []
-
-                        for i in item_component.components:
-                            assets_json_dict[asset_name][component_type].append([
-                                i.filepath, i.name])
-                collections_json_dict[collection.name] = assets_json_dict
-            print(json.dumps(collections_json_dict, indent=4, sort_keys=True,))
-            #json.dump(collections_json_dict, data_file, indent=4, sort_keys=True,)
+            json.dump(collections_json_dict, data_file, indent=4, sort_keys=True,)
 
         runtime_vars["save_state"] = SaveState.AllSaved
+        print("PowerLib2: ... no errors!")
         return {'FINISHED'}
 
 
