@@ -79,7 +79,7 @@ enum_component_type = EnumProperty(
     ),
     default='INSTANCE_GROUPS',
     name="Component Type",
-    description="",
+    description="Type of an asset component",
 )
 
 
@@ -173,6 +173,26 @@ class ColRequiredOperator(Operator):
         active_col = wm.powerlib_props.active_col
         return (active_col
             and wm.powerlib_props.collections[active_col])
+
+    @staticmethod
+    def name_new_item(container, default_name):
+        if default_name not in container:
+            return default_name
+        else:
+            sorted_container = []
+            for a in container:
+                if a.name.startswith(default_name + "."):
+                    index = a.name[len(default_name) + 1:]
+                    if index.isdigit():
+                        sorted_container.append(index)
+            sorted_container = sorted(sorted_container)
+            min_index = 1
+            for num in sorted_container:
+                num = int(num)
+                if min_index < num:
+                    break
+                min_index = num + 1
+            return"{:s}.{:03d}".format(default_name, min_index)
 
 
 class ColAndAssetRequiredOperator(ColRequiredOperator):
@@ -381,24 +401,7 @@ class ASSET_OT_powerlib_assetitem_add(ColRequiredOperator):
         asset = col.assets.add()
 
         # naming
-        default_name = "NewAsset"
-        if default_name not in col.assets:
-            asset.name  = default_name
-        else:
-            sorted_assets = []
-            for a in col.assets:
-                if a.name.startswith(default_name + "."):
-                    index = a.name[len(default_name) + 1:]
-                    if index.isdigit():
-                        sorted_assets.append(index)
-            sorted_assets = sorted(sorted_assets)
-            min_index = 1
-            for num in sorted_assets:
-                num = int(num)
-                if min_index < num:
-                    break
-                min_index = num + 1
-            asset.name = "{:s}.{:03d}".format(default_name, min_index)
+        asset.name = self.name_new_item(col.assets, "NewAsset")
 
         # select newly created asset
         col.active_asset = len(col.assets) - 1
@@ -435,10 +438,15 @@ class ASSET_OT_powerlib_component_add(ColAndAssetRequiredOperator):
     bl_options = {'UNDO', 'REGISTER'}
 
     component_type = enum_component_type
+    needs_select = BoolProperty(default=False, options={'HIDDEN'})
 
     def invoke(self, context, event):
         wm = context.window_manager
-        return wm.invoke_props_dialog(self)
+        if self.needs_select:
+            self.needs_select = False
+            return wm.invoke_props_dialog(self)
+        else:
+            return self.execute(context)
 
     def execute(self, context):
         wm = context.window_manager
@@ -446,6 +454,7 @@ class ASSET_OT_powerlib_component_add(ColAndAssetRequiredOperator):
         asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         active_asset = asset_collection.assets[asset_collection.active_asset]
 
+        # create container for type if it does not exist yet
         components_of_type = active_asset.components_by_type.get(self.component_type.lower())
         if components_of_type is None:
             components_of_type = active_asset.components_by_type.add()
@@ -453,6 +462,12 @@ class ASSET_OT_powerlib_component_add(ColAndAssetRequiredOperator):
             components_of_type.component_type = self.component_type
 
         component = components_of_type.components.add()
+
+        # naming
+        component.name = self.name_new_item(components_of_type.components, "NewComponent")
+
+        # select newly created component
+        components_of_type.active_component = len(components_of_type.components) - 1
 
         runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
@@ -463,6 +478,8 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
     bl_label = "Delete Asset Component"
     bl_description = "Delete the selected asset component"
     bl_options = {'UNDO', 'REGISTER'}
+
+    component_type = enum_component_type
 
     item_index = IntProperty(
         name="Index in the list",
@@ -610,17 +627,23 @@ class ASSET_PT_powerlib(Panel):
                 row.label(components_of_type.component_type)
                 row = layout.row()
                 row.template_list(
-                    "ASSET_UL_asset_components", "",       # type and unique id
+                    "ASSET_UL_asset_components",           # type
+                    "components_of_type.component_type",   # unique id
                     components_of_type, "components",      # pointer to the CollectionProperty
                     components_of_type, "active_component",# pointer to the active identifier
                     rows=2,
                 )
+                # add/remove/specials UI list Menu
+                if is_edit_mode:
+                    col = row.column(align=True)
+                    col.operator("wm.powerlib_component_add", icon='ZOOMIN', text="").component_type = components_of_type.component_type
+                    col.operator("wm.powerlib_component_del", icon='ZOOMOUT', text="").component_type = components_of_type.component_type
 
 
         if is_edit_mode:
             layout.separator()
             row = layout.row()
-            row.operator("wm.powerlib_component_add", icon='ZOOMIN')
+            row.operator("wm.powerlib_component_add", icon='ZOOMIN').needs_select = True
 
         # Save
 
