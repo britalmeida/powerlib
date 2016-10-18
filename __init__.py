@@ -506,18 +506,51 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
         runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
+
+class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
+    bl_idname = "wm.powerlib_link_in_component"
+    bl_label = "TODO"
+    bl_description = "TODO"
+    bl_options = {'UNDO', 'REGISTER'}
+
+    index = IntProperty(options={'HIDDEN'})
+    component_type = StringProperty(options={'HIDDEN'})
+
+    def execute(self, context):
+        wm = context.window_manager
+
+        asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
+        active_asset = asset_collection.assets[asset_collection.active_asset]
+
+        components_of_type = active_asset.components_by_type.get(self.component_type)
+        if components_of_type:
+            component = components_of_type.components[self.index]
+
+            #TODO
+            print("TODO Linking in {0} from {1}".format(component.name, component.filepath))
+
+        return {'FINISHED'}
+
+
 # Panel #######################################################################
 
 class ASSET_UL_asset_components(UIList):
     def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-        layout.prop(set, "name", text="", icon='GROUP', emboss=False)
+        is_edit_mode = context.window_manager.powerlib_props.is_edit_mode
 
-        #for idx, component in enumerate(components_of_type.components):
-#                    row = layout.row()
-#                    row.enabled = is_edit_mode
-#                    row.prop(component, "filepath", text="")
-#                    row.prop(component, "name", text="")
-#                    row.operator("wm.powerlib_component_del", text="", icon='X').item_index = idx
+        col = layout.split()
+
+        col.enabled = is_edit_mode
+        col.prop(set, "filepath", text="", emboss=is_edit_mode)
+        col.prop(set, "name", text="", emboss=is_edit_mode)
+        #layout.template_ID(context.scene.objects, "active")
+
+        if not is_edit_mode:
+            col = layout.split()
+            col.enabled = True
+            monkey = col.operator("wm.powerlib_link_in_component", text="", icon='MESH_MONKEY')
+            monkey.index = index
+            monkey.component_type = active_data.name
 
 
 class ASSET_UL_collection_assets(UIList):
@@ -684,6 +717,7 @@ classes = (
     ASSET_OT_powerlib_assetitem_del,
     ASSET_OT_powerlib_component_add,
     ASSET_OT_powerlib_component_del,
+    ASSET_OT_powerlib_link_in_component,
 )
 
 # Reload the JSON library when a file is loaded
