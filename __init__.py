@@ -66,6 +66,10 @@ runtime_vars = {}
 class ReadState:
     NotLoaded, NoFile, FilePathInvalid, FileContentInvalid, EmptyLib, AllGood = range(6)
 runtime_vars["read_state"] = ReadState.NotLoaded
+class SaveState:
+    HasUnsavedChanges, AllSaved = range(2)
+runtime_vars["save_state"] = SaveState.AllSaved
+
 
 enum_component_type = EnumProperty(
     items=(
@@ -193,6 +197,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
 
         wm.powerlib_props.collections.clear()
         wm.powerlib_props.active_col = ""
+        runtime_vars["save_state"] = SaveState.AllSaved
 
         # Load single json library file
 
@@ -294,6 +299,8 @@ class ASSET_OT_powerlib_save_to_json(Operator):
                 collections_json_dict[collection.name] = assets_json_dict
             print(json.dumps(collections_json_dict, indent=4, sort_keys=True,))
             #json.dump(collections_json_dict, data_file, indent=4, sort_keys=True,)
+
+        runtime_vars["save_state"] = SaveState.AllSaved
         return {'FINISHED'}
 
 
@@ -316,6 +323,8 @@ class ASSET_OT_powerlib_collection_rename(ColRequiredOperator):
         col = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         col.name = self.name
         wm.powerlib_props.active_col = self.name
+
+        runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
 
@@ -336,6 +345,7 @@ class ASSET_OT_powerlib_collection_add(Operator):
         col = wm.powerlib_props.collections.add()
         col.name = self.name
         wm.powerlib_props.active_col = self.name
+        runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
 
@@ -350,6 +360,7 @@ class ASSET_OT_powerlib_collection_del(ColRequiredOperator):
         idx = wm.powerlib_props.collections.find(wm.powerlib_props.active_col)
         wm.powerlib_props.collections.remove(idx)
         wm.powerlib_props.active_col = ""
+        runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
 
@@ -388,6 +399,7 @@ class ASSET_OT_powerlib_assetitem_add(ColRequiredOperator):
         # select newly created asset
         col.active_asset = len(col.assets) - 1
 
+        runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
 
@@ -408,6 +420,7 @@ class ASSET_OT_powerlib_assetitem_del(ColAndAssetRequiredOperator):
         if (col.active_asset > (num_assets - 1) and num_assets > 0):
             col.active_asset = num_assets - 1
 
+        runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
 
@@ -437,6 +450,7 @@ class ASSET_OT_powerlib_component_add(ColAndAssetRequiredOperator):
 
         component = components_of_type.components.add()
 
+        runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
 
@@ -458,6 +472,7 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
         active_asset = asset_collection.assets[asset_collection.active_asset]
         active_asset.components.remove(self.item_index)
 
+        runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
 
 # Panel #######################################################################
@@ -594,7 +609,8 @@ class ASSET_PT_powerlib(Panel):
         if is_edit_mode:
             layout.separator()
             row = layout.row()
-            row.operator("wm.powerlib_save_to_json", icon='FILE_TICK')
+            row.operator("wm.powerlib_save_to_json",
+                icon='ERROR' if runtime_vars["save_state"] == SaveState.HasUnsavedChanges else 'FILE_TICK')
 
 
 # Registry ####################################################################
@@ -625,7 +641,6 @@ def powerlib_post_load_blend_cb(dummy_context):
     bpy.ops.wm.powerlib_reload_from_json()
 
 def powerlib_reload_json_cb(self, context):
-    print ("CB!")
     powerlib_post_load_blend_cb(context)
 
 
