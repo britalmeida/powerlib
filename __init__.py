@@ -35,6 +35,7 @@ import os
 import json
 
 import bpy
+from bpy.app.handlers import persistent
 from bpy.types import (
     Operator,
     Menu,
@@ -60,6 +61,11 @@ from bpy.props import (
 #     the collection "Characters" contains the assets "Boris" and "Agent327"
 #     an asset has one or more components of type "instance_groups"
 #     which consist of a path to the blend file and the name of the group to instance
+
+runtime_vars = {}
+class ReadState:
+    NotLoaded, NoFile, FilePathInvalid, FileContentInvalid, EmptyLib, AllGood = range(6)
+runtime_vars["read_state"] = ReadState.NotLoaded
 
 enum_component_type = EnumProperty(
     items=(
@@ -186,13 +192,33 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         wm = context.window_manager
 
         wm.powerlib_props.collections.clear()
+        wm.powerlib_props.active_col = ""
 
-        # load single json library file
-        library = {}
+        # Load single json library file
+
         library_path = bpy.path.abspath(context.scene.lib_path)
-        print("PowerLib2: Reading JSON library file from %s", library_path)
+        print("PowerLib2: Reading JSON library file from %s" % library_path)
+
+        if not library_path:
+            print("PowerLib2: ... no library path specified!")
+            runtime_vars["read_state"] = ReadState.NoFile
+            return {'FINISHED'}
+
+        if not os.path.exists(library_path):
+            print("PowerLib2: ... library filepath invalid!")
+            runtime_vars["read_state"] = ReadState.FilePathInvalid
+            return {'FINISHED'}
+
+        library = {}
+
         with open(library_path) as data_file:
-            library = json.load(data_file)
+            try:
+                library = json.load(data_file)
+            except (json.decoder.JSONDecodeError, KeyError, ValueError):
+                # malformed json data
+                print("PowerLib2: ... JSON content is empty or malformed!")
+                runtime_vars["read_state"] = ReadState.FileContentInvalid
+                return {'FINISHED'}
 
         # Collections, eg. Characters
         for collection_name in library:
@@ -217,8 +243,15 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                         component_prop.id = name
                         component_prop.filepath = filepath
 
-        # Assign some collection by default (dictionaries are unordered)
-        wm.powerlib_props.active_col = next(iter(library.keys()))
+        if library:
+            # Assign some collection by default (dictionaries are unordered)
+            wm.powerlib_props.active_col = next(iter(library.keys()))
+
+            runtime_vars["read_state"] = ReadState.AllGood
+        else:
+            runtime_vars["read_state"] = ReadState.EmptyLib
+
+        print("PowerLib2: ... looks good!")
 
         return {'FINISHED'}
 
@@ -468,6 +501,38 @@ class ASSET_PT_powerlib(Panel):
             row.prop(scene, "lib_path", text="Library Path")
             layout.separator()
 
+        # Fail report for library loading
+
+        read_state = runtime_vars["read_state"]
+
+        if (read_state != ReadState.AllGood
+            and not (read_state == ReadState.EmptyLib and is_edit_mode)):
+
+            row = layout.row()
+            row.alignment = 'CENTER'
+            if (read_state == ReadState.NotLoaded or read_state == ReadState.NoFile):
+                if is_edit_mode:
+                    row.label("No library path chosen", icon='ERROR')
+                else:
+                    row.alignment = 'EXPAND'
+                    row.label("Choose a library path:")
+                    row = layout.row()
+                    row.prop(scene, "lib_path", text="")
+            elif (read_state == ReadState.FilePathInvalid):
+                if not is_edit_mode:
+                    row.alignment = 'EXPAND'
+                    row.label("Choose a library path:")
+                    row = layout.row()
+                    row.prop(scene, "lib_path", text="")
+                    row = layout.row()
+                row.label("Can not find a library in the given path", icon='ERROR')
+            elif (read_state == ReadState.FileContentInvalid):
+                row.label("The library is empty or corrupt!", icon='ERROR')
+            elif (read_state == ReadState.EmptyLib and not is_edit_mode):
+                row.label("The chosen library is empty")
+
+            return
+
         # Category selector
 
         row = layout.row(align=True)
@@ -553,6 +618,17 @@ classes = (
     ASSET_OT_powerlib_component_del,
 )
 
+# Reload the JSON library when a file is loaded
+@persistent
+def powerlib_post_load_blend_cb(dummy_context):
+    print("PowerLib2: Loading Add-on and Library")
+    bpy.ops.wm.powerlib_reload_from_json()
+
+def powerlib_reload_json_cb(self, context):
+    print ("CB!")
+    powerlib_post_load_blend_cb(context)
+
+
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
@@ -567,10 +643,14 @@ def register():
         name="Powerlib Add-on Library Path",
         description="Path to a PowerLib JSON file",
         subtype='FILE_PATH',
+        update=powerlib_reload_json_cb,
     )
+
+    bpy.app.handlers.load_post.append(powerlib_post_load_blend_cb)
 
 
 def unregister():
+    bpy.app.handlers.load_post.remove(powerlib_post_load_blend_cb)
 
     del bpy.types.Scene.lib_path
     del bpy.types.WindowManager.powerlib_props
