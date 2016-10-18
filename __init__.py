@@ -481,17 +481,27 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
 
     component_type = enum_component_type
 
-    item_index = IntProperty(
-        name="Index in the list",
-        default=0,
-    )
-
     def execute(self, context):
         wm = context.window_manager
 
         asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         active_asset = asset_collection.assets[asset_collection.active_asset]
-        active_asset.components.remove(self.item_index)
+
+        # ignore if container for type does not exist
+        components_of_type = active_asset.components_by_type.get(self.component_type.lower())
+        if components_of_type is None:
+            return {'FINISHED'}
+
+        components_of_type.components.remove(components_of_type.active_component)
+
+        num_components = len(components_of_type.components)
+        # if this component type list is empty, delete
+        if num_components == 0:
+            idx = active_asset.components_by_type.find(self.component_type.lower())
+            active_asset.components_by_type.remove(idx)
+        # change currently active component
+        elif (components_of_type.active_component > (num_components - 1) and num_components > 0):
+            components_of_type.active_component = num_components - 1
 
         runtime_vars["save_state"] = SaveState.HasUnsavedChanges
         return {'FINISHED'}
