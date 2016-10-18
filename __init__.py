@@ -73,9 +73,9 @@ runtime_vars["save_state"] = SaveState.AllSaved
 
 enum_component_type = EnumProperty(
     items=(
-        ('INSTANCE_GROUPS', "Instance Groups", ""),
-        ('NONINSTANCE_GROUPS', "Non Instance Groups", ""),
-        ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", ""),
+        ('INSTANCE_GROUPS', "Instance Groups", "", 'EMPTY_DATA', 0),
+        ('NONINSTANCE_GROUPS', "Non Instance Groups", "", 'GROUP', 1),
+        ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", "", 'OBJECT_DATA', 2),
     ),
     default='INSTANCE_GROUPS',
     name="Component Type",
@@ -106,6 +106,10 @@ class ComponentsList(PropertyGroup):
         name="Components",
         description="List of components of this type",
         type=Component,
+    )
+    active_component = IntProperty(
+        name="Selected Component",
+        description="Currently selected component of this type",
     )
 
     @staticmethod
@@ -477,6 +481,18 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
 
 # Panel #######################################################################
 
+class ASSET_UL_asset_components(UIList):
+    def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+        layout.prop(set, "name", text="", icon='GROUP', emboss=False)
+
+        #for idx, component in enumerate(components_of_type.components):
+#                    row = layout.row()
+#                    row.enabled = is_edit_mode
+#                    row.prop(component, "filepath", text="")
+#                    row.prop(component, "name", text="")
+#                    row.operator("wm.powerlib_component_del", text="", icon='X').item_index = idx
+
+
 class ASSET_UL_collection_assets(UIList):
     def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
         layout.prop(set, "name", text="", icon='LINK_BLEND', emboss=False)
@@ -592,12 +608,14 @@ class ASSET_PT_powerlib(Panel):
             for components_of_type in active_asset.components_by_type:
                 row = layout.row()
                 row.label(components_of_type.component_type)
-                for idx, component in enumerate(components_of_type.components):
-                    row = layout.row()
-                    row.enabled = is_edit_mode
-                    row.prop(component, "filepath", text="")
-                    row.prop(component, "name", text="")
-                    row.operator("wm.powerlib_component_del", text="", icon='X').item_index = idx
+                row = layout.row()
+                row.template_list(
+                    "ASSET_UL_asset_components", "",       # type and unique id
+                    components_of_type, "components",      # pointer to the CollectionProperty
+                    components_of_type, "active_component",# pointer to the active identifier
+                    rows=2,
+                )
+
 
         if is_edit_mode:
             layout.separator()
@@ -621,6 +639,7 @@ classes = (
     AssetItem,
     AssetCollection,
     PowerProperties,
+    ASSET_UL_asset_components,
     ASSET_UL_collection_assets,
     ASSET_PT_powerlib,
     ASSET_OT_powerlib_reload_from_json,
