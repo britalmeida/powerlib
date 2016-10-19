@@ -525,7 +525,6 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
     bl_options = {'UNDO', 'REGISTER'}
 
     index = IntProperty(options={'HIDDEN'})
-    component_type = StringProperty(options={'HIDDEN'})
 
     def execute(self, context):
         wm = context.window_manager
@@ -533,12 +532,8 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
         asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         active_asset = asset_collection.assets[asset_collection.active_asset]
 
-        components_of_type = active_asset.components_by_type.get(self.component_type)
-        if components_of_type:
-            component = components_of_type.components[self.index]
-
-            #TODO
-            print("TODO Linking in {0} from {1}".format(component.name, component.filepath))
+        #TODO
+        print("TODO Linking in {}".format(active_asset.name))
 
         return {'FINISHED'}
 
@@ -556,17 +551,19 @@ class ASSET_UL_asset_components(UIList):
         col.prop(set, "name", text="", emboss=is_edit_mode)
         #layout.template_ID(context.scene.objects, "active")
 
-        if not is_edit_mode:
-            col = layout.split()
-            col.enabled = True
-            monkey = col.operator("wm.powerlib_link_in_component", text="", icon='MESH_MONKEY')
-            monkey.index = index
-            monkey.component_type = active_data.name
-
 
 class ASSET_UL_collection_assets(UIList):
     def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
-        layout.prop(set, "name", text="", icon='LINK_BLEND', emboss=False)
+        # layout.prop(set, "name", text="", icon='LINK_BLEND', emboss=False)
+        is_edit_mode = context.window_manager.powerlib_props.is_edit_mode
+        col = layout.split()
+        col.prop(set, "name", text="", icon='LINK_BLEND', emboss=False)
+        if is_edit_mode:
+            return
+        col = layout.split()
+        col.enabled = True
+        monkey = col.operator("wm.powerlib_link_in_component", text="", icon='MESH_MONKEY')
+        monkey.index = index
 
 
 class ASSET_PT_powerlib(Panel):
