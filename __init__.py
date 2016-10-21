@@ -601,7 +601,6 @@ class ASSET_UL_asset_components(UIList):
         is_edit_mode = context.window_manager.powerlib_props.is_edit_mode
 
         col = layout.split()
-
         col.enabled = is_edit_mode
         col.prop(set, "filepath_rel", text="", emboss=is_edit_mode)
         col.prop(set, "name", text="", emboss=is_edit_mode)

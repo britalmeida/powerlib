@@ -6,6 +6,8 @@ def relative_path_to_file(filepath):
     common_path = os.path.commonprefix([bpy.data.filepath, filepath])
     rel_path = os.path.relpath(filepath, common_path)
     # TODO: make this better. Should be a blender style relpath.
+    if rel_path == '.':
+        rel_path = os.path.basename(filepath)
     rel_path = '//' + rel_path
     # TODO: handle the case where path is absolute
     return rel_path
