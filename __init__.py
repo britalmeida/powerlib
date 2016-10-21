@@ -52,7 +52,6 @@ from bpy.props import (
     PointerProperty,
 )
 
-
 # Data Structure ##############################################################
 
 # A powerlib library is structured as a series of collections of assets.
@@ -84,6 +83,22 @@ enum_component_type = EnumProperty(
 
 
 class Component(PropertyGroup):
+    def update_filepath_rel(self, context):
+        """Updates the filepath property after we picked a new value for
+        filepath_rel via a file browser.
+        """
+        if self.filepath_rel == '':
+            return
+        # TODO: ensure path is valid
+        # Make path relative to the library
+        from . import linking
+        import importlib
+        importlib.reload(linking)
+
+        fp_rel_to_lib = linking.relative_path_to_lib(self.filepath_rel)
+        print('Updating library link to {}'.format(fp_rel_to_lib))
+        self.filepath = fp_rel_to_lib
+
     id = StringProperty(
         name="Name",
         description="Name for this component, eg. the name of a group",
@@ -95,6 +110,13 @@ class Component(PropertyGroup):
         subtype='FILE_PATH',
     )
 
+    filepath_rel = StringProperty(
+        name="Relative file path",
+        description="Path to the blend file which holds this data relative from the current file",
+        subtype='FILE_PATH',
+        update=update_filepath_rel,
+    )
+
     @property
     def absolute_filepath(self):
         library_path = os.path.dirname(
@@ -104,7 +126,8 @@ class Component(PropertyGroup):
         if os.path.isfile(normpath):
             return normpath
         else:
-            raise IOError('File {} not found'.format(normpath))
+            # raise IOError('File {} not found'.format(normpath))
+            print('IOError: File {} not found'.format(normpath))
 
 
 class ComponentsList(PropertyGroup):
@@ -228,6 +251,10 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         return True
 
     def execute(self, context):
+        from . import linking
+        import importlib
+        importlib.reload(linking)
+
         wm = context.window_manager
 
         wm.powerlib_props.collections.clear()
@@ -282,6 +309,12 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                         component_prop.name = name
                         component_prop.id = name
                         component_prop.filepath = filepath
+                        absolute_filepath = component_prop.absolute_filepath
+                        if absolute_filepath:
+                            bf_rel_fp = linking.relative_path_to_file(component_prop.absolute_filepath)
+                        else:
+                            bf_rel_fp = ''
+                        component_prop.filepath_rel = bf_rel_fp
 
         if library:
             # Assign some collection by default (dictionaries are unordered)
@@ -570,7 +603,7 @@ class ASSET_UL_asset_components(UIList):
         col = layout.split()
 
         col.enabled = is_edit_mode
-        col.prop(set, "filepath", text="", emboss=is_edit_mode)
+        col.prop(set, "filepath_rel", text="", emboss=is_edit_mode)
         col.prop(set, "name", text="", emboss=is_edit_mode)
         #layout.template_ID(context.scene.objects, "active")
 
