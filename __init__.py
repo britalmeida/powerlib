@@ -95,6 +95,17 @@ class Component(PropertyGroup):
         subtype='FILE_PATH',
     )
 
+    @property
+    def absolute_filepath(self):
+        library_path = os.path.dirname(
+            bpy.path.abspath(bpy.context.scene['lib_path']))
+        abspath = os.path.join(library_path, self.filepath)
+        normpath = os.path.normpath(abspath)
+        if os.path.isfile(normpath):
+            return normpath
+        else:
+            raise IOError('File {} not found'.format(normpath))
+
 
 class ComponentsList(PropertyGroup):
     """A set of components of a certain type that build an asset
@@ -527,13 +538,25 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
     index = IntProperty(options={'HIDDEN'})
 
     def execute(self, context):
+        from . import linking
+        if "bpy" in locals():
+            import importlib
+            importlib.reload(linking)
+
         wm = context.window_manager
 
         asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
         active_asset = asset_collection.assets[asset_collection.active_asset]
 
-        #TODO
-        print("TODO Linking in {}".format(active_asset.name))
+        print('Linking in {}'.format(active_asset.name))
+
+        for component_list in active_asset.components_by_type:
+            if component_list.component_type == 'GROUP_REFERENCE_OBJECTS':
+                for component in component_list.components:
+                    linking.load_group_reference_objects(
+                        component.absolute_filepath, component.id)
+            else:
+                print('Skipping anything that is not GROUP_REFERENCE_OBJECTS')
 
         return {'FINISHED'}
 
