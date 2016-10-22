@@ -597,13 +597,16 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
 # Panel #######################################################################
 
 class ASSET_UL_asset_components(UIList):
-    def draw_item(self, context, layout, data, set, icon, active_data, active_propname, index):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         is_edit_mode = context.window_manager.powerlib_props.is_edit_mode
-
         col = layout.split()
         col.enabled = is_edit_mode
-        col.prop(set, "filepath_rel", text="", emboss=is_edit_mode)
-        col.prop(set, "name", text="", emboss=is_edit_mode)
+        col.prop(item, "filepath_rel", text="", emboss=is_edit_mode)
+        # TODO: Make "check if we are in the same file as item.filepath_rel" efficient
+        if item.filepath_rel == '//' + os.path.basename(bpy.data.filepath):
+            pass
+            # Show a nice selector, because we have access to the local groups
+        col.prop(item, "name", text="", emboss=is_edit_mode)
         #layout.template_ID(context.scene.objects, "active")
 
 
