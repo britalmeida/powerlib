@@ -61,7 +61,7 @@ def treat_ob(ob, grp=None):
 def load_group_reference_objects(filepath, group_name):
     # We load one group at a time
     print('Loading group {}'.format(group_name))
-    rel_path = make_library_path_relative(filepath)
+    rel_path = relative_path_to_file(filepath)
     # Road a object scene we know the name of.
     with bpy.data.libraries.load(rel_path, link=True) as (data_from, data_to):
         data_to.groups = [group_name]
