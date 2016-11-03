@@ -125,7 +125,7 @@ class Component(PropertyGroup):
 
     filepath = StringProperty(
         name="File path",
-        description="Path to the blend file which holds this data",
+        description="Path to the blend file which holds this data relative to the library",
         subtype='FILE_PATH',
     )
 
