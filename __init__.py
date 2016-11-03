@@ -70,8 +70,6 @@ class SaveState:
 runtime_vars["save_state"] = SaveState.AllSaved
 
 
-runtime_vars["components_enum_cache"] = {}
-
 enum_component_type = EnumProperty(
     items=(
         ('INSTANCE_GROUPS', "Instance Groups", "", 'EMPTY_DATA', 0),
@@ -108,33 +106,18 @@ class Component(PropertyGroup):
         self.filepath = fp_rel_to_lib
 
         cache_key = self.filepath
-        enum_cache = runtime_vars["components_enum_cache"].setdefault(cache_key, [])
         if self.filepath_rel == '//' + os.path.basename(bpy.data.filepath):
-            enum_cache[:] = [(g.name, g.name, "") for g in bpy.data.groups if not g.library]
             for g in bpy.data.groups:
                 if g.library:
                     continue
                 self.groups.add().name = g.name
         else:
             with bpy.data.libraries.load(self.absolute_filepath) as (data_from, data_to):
-                enum_cache[:] = [(gname, gname, "") for gname in data_from.groups]
                 for gname in data_from.groups:
                     self.groups.add().name = gname
 
-    def components_enumf(self, context):
-        if not context or not context.window_manager:
-            return []
-        cache_key = self.filepath
-        return runtime_vars["components_enum_cache"].setdefault(cache_key, [])
-
     id = StringProperty(
         name="Name",
-        description="Name for this component, eg. the name of a group",
-    )
-
-    name_name = EnumProperty(
-        items=components_enumf,
-        name="Name_name",
         description="Name for this component, eg. the name of a group",
     )
 
@@ -639,15 +622,7 @@ class ASSET_UL_asset_components(UIList):
         col = layout.split()
         col.enabled = is_edit_mode
         col.prop(item, "filepath_rel", text="", emboss=is_edit_mode)
-        # TODO: Make "check if we are in the same file as item.filepath_rel" efficient
-        #~ if item.filepath_rel == '//' + os.path.basename(bpy.data.filepath):
-            #~ layout.template_ID(item, "active")
-            #~ # Show a nice selector, because we have access to the local groups
-        #~ else:
-            #~ col.prop(item, "name", text="", emboss=is_edit_mode)
-        row = col.row()
-        row.prop_search(item, "group", item, "groups", text="")
-        row.prop(item, "name_name", text="", emboss=is_edit_mode)
+        col.prop_search(item, "group", item, "groups", text="")
 
 
 class ASSET_UL_collection_assets(UIList):
