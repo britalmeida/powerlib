@@ -35,6 +35,12 @@ def treat_ob(ob, grp=None):
         # - user_remap() it
         existing.user_remap(ob)
         existing.name = '(PRE-SPLODE LOCAL) %s' % existing.name
+        # Preserve visible or hidden state
+        ob.hide = existing.hide
+        # Preserve animation (used to place the instance in the scene)
+        if existing.animation_data:
+            ob.animation_data_create()
+            ob.animation_data.action = existing.animation_data.action
         bpy.data.objects.remove(existing)
 
     # for all:
