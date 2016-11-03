@@ -7,12 +7,7 @@ def relative_path_to_file(filepath):
 
 
 def absolute_path_from_file(rel_filepath):
-    if rel_filepath.startswith('//'):
-        rel_filepath = rel_filepath[2:]
-    normpath = os.path.normpath(rel_filepath)
-    dirname = os.path.dirname(bpy.data.filepath)
-    filepath = os.path.join(dirname, normpath)
-    return filepath
+    return bpy.path.abspath(rel_filepath)
 
 
 def relative_path_to_lib(filepath):
@@ -21,7 +16,6 @@ def relative_path_to_lib(filepath):
     libpath = os.path.dirname(
         absolute_path_from_file(bpy.context.scene['lib_path']))
     rel_path = os.path.relpath(filepath, libpath)
-    # TODO: handle the case where path is absolute
     return rel_path
 
 
