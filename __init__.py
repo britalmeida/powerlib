@@ -81,12 +81,18 @@ enum_component_type = EnumProperty(
     description="Type of an asset component",
 )
 
+class ComponentItem(PropertyGroup):
+    name = StringProperty()
+
 
 class Component(PropertyGroup):
     def update_filepath_rel(self, context):
         """Updates the filepath property after we picked a new value for
         filepath_rel via a file browser.
         """
+        #~ self.group = None
+        self.groups.clear()
+
         if self.filepath_rel == '':
             return
         # TODO: ensure path is valid
@@ -99,10 +105,23 @@ class Component(PropertyGroup):
         print('Updating library link to {}'.format(fp_rel_to_lib))
         self.filepath = fp_rel_to_lib
 
+        cache_key = self.filepath
+        if self.filepath_rel == '//' + os.path.basename(bpy.data.filepath):
+            for g in bpy.data.groups:
+                if g.library:
+                    continue
+                self.groups.add().name = g.name
+        else:
+            with bpy.data.libraries.load(self.absolute_filepath) as (data_from, data_to):
+                for gname in data_from.groups:
+                    self.groups.add().name = gname
+
     id = StringProperty(
         name="Name",
         description="Name for this component, eg. the name of a group",
     )
+
+    groups = CollectionProperty(type=ComponentItem)
 
     filepath = StringProperty(
         name="File path",
@@ -602,12 +621,7 @@ class ASSET_UL_asset_components(UIList):
         col = layout.split()
         col.enabled = is_edit_mode
         col.prop(item, "filepath_rel", text="", emboss=is_edit_mode)
-        # TODO: Make "check if we are in the same file as item.filepath_rel" efficient
-        if item.filepath_rel == '//' + os.path.basename(bpy.data.filepath):
-            pass
-            # Show a nice selector, because we have access to the local groups
-        col.prop(item, "name", text="", emboss=is_edit_mode)
-        #layout.template_ID(context.scene.objects, "active")
+        col.prop_search(item, "id", item, "groups", text="")
 
 
 class ASSET_UL_collection_assets(UIList):
@@ -766,6 +780,7 @@ class ASSET_PT_powerlib(Panel):
 # Registry ####################################################################
 
 classes = (
+    ComponentItem,
     Component,
     ComponentsList,
     AssetItem,
