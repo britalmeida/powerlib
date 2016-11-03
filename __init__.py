@@ -388,7 +388,7 @@ class ASSET_OT_powerlib_save_to_json(Operator):
                     # Individual components of this type, each with filepath and name
                     for i in comp_type_body.components:
                         comps_by_type_json_dict[comp_type_name].append([
-                            i.filepath, i.name
+                            i.filepath, i.id
                         ])
 
                 assets_json_dict[asset_name] = comps_by_type_json_dict
