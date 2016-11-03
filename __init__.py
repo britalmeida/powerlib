@@ -121,7 +121,6 @@ class Component(PropertyGroup):
         description="Name for this component, eg. the name of a group",
     )
 
-    group = StringProperty()
     groups = CollectionProperty(type=ComponentItem)
 
     filepath = StringProperty(
@@ -622,7 +621,7 @@ class ASSET_UL_asset_components(UIList):
         col = layout.split()
         col.enabled = is_edit_mode
         col.prop(item, "filepath_rel", text="", emboss=is_edit_mode)
-        col.prop_search(item, "group", item, "groups", text="")
+        col.prop_search(item, "id", item, "groups", text="")
 
 
 class ASSET_UL_collection_assets(UIList):
