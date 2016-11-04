@@ -40,7 +40,12 @@ def treat_ob(ob, grp):
 
         # after we make it local the original ob is no longer the one we are looking for
         make_local(ob)
-        ob = [o for o in bpy.data.objects if o != ob and o.name == ob.name][0]
+
+        # try to get the new objects, sometimes there won't be one
+        for o in bpy.data.objects:
+            if o != ob and o.name == ob.name:
+                ob = o
+                break
 
     else:
         print('Updating {}'.format(ob.name))
