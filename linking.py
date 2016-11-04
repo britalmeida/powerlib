@@ -19,7 +19,16 @@ def relative_path_to_lib(filepath):
     return rel_path
 
 
-def treat_ob(ob, grp=None):
+def make_local(ob):
+    # for all:
+    # make local
+    override = bpy.context.copy()
+    override['selected_objects'] = [ob]
+    bpy.ops.object.make_local(override)
+
+
+def treat_ob(ob, grp):
+    """Remap existing ob to the new ob"""
     print('Processing {}'.format(ob.name))
     try:
         existing = bpy.data.objects[ob.name, None]
@@ -28,6 +37,11 @@ def treat_ob(ob, grp=None):
         # only for objects not yet in the file:
         if ob.name not in bpy.context.scene.objects:
             bpy.context.scene.objects.link(ob)
+
+        # after we make it local the original ob is no longer the one we are looking for
+        make_local(ob)
+        ob = [o for o in bpy.data.objects if o != ob and o.name == ob.name][0]
+
     else:
         print('Updating {}'.format(ob.name))
         # when an object already exists:
@@ -43,11 +57,9 @@ def treat_ob(ob, grp=None):
             ob.animation_data.action = existing.animation_data.action
         bpy.data.objects.remove(existing)
 
-    # for all:
-    # make local
-    override = bpy.context.copy()
-    override['selected_objects'] = [ob]
-    bpy.ops.object.make_local(override)
+        make_local(ob)
+
+    print('GRP: ', grp.name)
     grp.objects.link(ob)
 
 
