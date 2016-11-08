@@ -743,24 +743,26 @@ class ASSET_PT_powerlib(Panel):
 
         if wm.powerlib_props.active_col:
             layout.separator()
-            active_asset = asset_collection.assets[asset_collection.active_asset]
 
-            for components_of_type in active_asset.components_by_type:
-                row = layout.row()
-                row.label(components_of_type.component_type)
-                row = layout.row()
-                row.template_list(
-                    "ASSET_UL_asset_components",           # type
-                    "components_of_type.component_type",   # unique id
-                    components_of_type, "components",      # pointer to the CollectionProperty
-                    components_of_type, "active_component",# pointer to the active identifier
-                    rows=2,
-                )
-                # add/remove/specials UI list Menu
-                if is_edit_mode:
-                    col = row.column(align=True)
-                    col.operator("wm.powerlib_component_add", icon='ZOOMIN', text="").component_type = components_of_type.component_type
-                    col.operator("wm.powerlib_component_del", icon='ZOOMOUT', text="").component_type = components_of_type.component_type
+            if asset_collection.assets:
+                active_asset = asset_collection.assets[asset_collection.active_asset]
+
+                for components_of_type in active_asset.components_by_type:
+                    row = layout.row()
+                    row.label(components_of_type.component_type)
+                    row = layout.row()
+                    row.template_list(
+                        "ASSET_UL_asset_components",           # type
+                        "components_of_type.component_type",   # unique id
+                        components_of_type, "components",      # pointer to the CollectionProperty
+                        components_of_type, "active_component",# pointer to the active identifier
+                        rows=2,
+                    )
+                    # add/remove/specials UI list Menu
+                    if is_edit_mode:
+                        col = row.column(align=True)
+                        col.operator("wm.powerlib_component_add", icon='ZOOMIN', text="").component_type = components_of_type.component_type
+                        col.operator("wm.powerlib_component_del", icon='ZOOMOUT', text="").component_type = components_of_type.component_type
 
 
         if is_edit_mode:
