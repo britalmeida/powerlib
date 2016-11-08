@@ -29,23 +29,21 @@ def make_local(ob):
 
 def treat_ob(ob, grp):
     """Remap existing ob to the new ob"""
-    print('Processing {}'.format(ob.name))
+    ob_name = ob.name
+    print('Processing {}'.format(ob_name))
+
     try:
-        existing = bpy.data.objects[ob.name, None]
+        existing = bpy.data.objects[ob_name, None]
+
     except KeyError:
         print('Not yet in Blender, just linking to scene.')
-        # only for objects not yet in the file:
-        if ob.name not in bpy.context.scene.objects:
-            bpy.context.scene.objects.link(ob)
+        bpy.context.scene.objects.link(ob)
 
-        # after we make it local the original ob is no longer the one we are looking for
         make_local(ob)
+        ob = bpy.data.objects[ob_name, None]
 
-        # try to get the new objects, sometimes there won't be one
-        for o in bpy.data.objects:
-            if o != ob and o.name == ob.name:
-                ob = o
-                break
+        print('GRP: ', grp.name)
+        grp.objects.link(ob)
 
     else:
         print('Updating {}'.format(ob.name))
@@ -54,40 +52,57 @@ def treat_ob(ob, grp):
         # - user_remap() it
         existing.user_remap(ob)
         existing.name = '(PRE-SPLODE LOCAL) %s' % existing.name
+
         # Preserve visible or hidden state
         ob.hide = existing.hide
+
         # Preserve animation (used to place the instance in the scene)
         if existing.animation_data:
             ob.animation_data_create()
             ob.animation_data.action = existing.animation_data.action
-        bpy.data.objects.remove(existing)
 
+        bpy.data.objects.remove(existing)
         make_local(ob)
 
-    print('GRP: ', grp.name)
-    grp.objects.link(ob)
 
-
-def load_group_reference_objects(filepath, group_name):
+def load_group_reference_objects(filepath, group_names):
     # We load one group at a time
-    print('Loading group {}'.format(group_name))
+    print('Loading groups {} : {}'.format(filepath, group_names))
     rel_path = relative_path_to_file(filepath)
+
     # Road a object scene we know the name of.
     with bpy.data.libraries.load(rel_path, link=True) as (data_from, data_to):
-        data_to.groups = [group_name]
+        data_to.groups = group_names
 
+    data = {}
     for group in data_to.groups:
         print('Handling group {}'.format(group.name))
         ref_group_name = '__REF{}'.format(group.name)
+
         if ref_group_name in bpy.data.groups:
             object_names_from = [ob.name for ob in group.objects]
             object_names_to = [ob.name for ob in bpy.data.groups[ref_group_name].objects]
             object_names_diff = list(set(object_names_to) - set(object_names_from))
+
             # Delete removed objects
             for ob in object_names_diff:
                 bpy.data.objects[ob].select = True
                 bpy.ops.object.delete()
         else:
             bpy.ops.group.create(name=ref_group_name)
-        for ob in group.objects:
-            treat_ob(ob, bpy.data.groups[ref_group_name])
+
+        # store all the objects that are in the group
+        data[bpy.data.groups[ref_group_name]] = [ob for ob in group.objects]
+
+        # remove the groups
+        bpy.data.groups.remove(group, do_unlink=True)
+
+    # add the new objects and make them local
+    process_group_reference_objects(data)
+
+
+def process_group_reference_objects(data):
+    for group, objects in data.items():
+        for ob in objects:
+            treat_ob(ob, group)
+
