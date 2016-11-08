@@ -19,12 +19,45 @@ def relative_path_to_lib(filepath):
     return rel_path
 
 
+def bottom_up_from_idblock(idblock):
+    """Generator, yields datablocks from the bottom (i.e. uses nothing) upward.
+
+    Stupid in that it doesn't detect cycles yet.
+
+    :param idblock: the idblock whose users to yield.
+    """
+
+    visited = set()
+
+    def visit(idblock):
+        # Prevent visiting the same idblock multiple times
+        if idblock in visited:
+            return
+        visited.add(idblock)
+
+        user_map = bpy.data.user_map([idblock])
+        # There is only one entry here, for the idblock we requested.
+        for user in user_map[idblock]:
+            yield from visit(user)
+        yield idblock
+
+    yield from visit(idblock)
+
+
 def make_local(ob):
-    # for all:
-    # make local
-    override = bpy.context.copy()
-    override['selected_objects'] = [ob]
-    bpy.ops.object.make_local(override)
+    # make local like a boss (using the patch from Sybren Stuvel)
+    for idblock in bottom_up_from_idblock(ob):
+
+        if idblock.library is None:
+            # Already local
+            continue
+
+        print('Should make %r local: ' % idblock)
+        print('   - result: %s' % bpy.data.make_local(idblock, clear_proxy=False))
+
+        # this shouldn't happen, but it does happen :/
+        if idblock.library:
+            pass
 
 
 def treat_ob(ob, grp):
