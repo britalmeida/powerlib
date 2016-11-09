@@ -581,6 +581,26 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
         return {'FINISHED'}
 
 
+class AssetFiles():
+    def __init__(self):
+        self._files = {}
+
+    def add(self, filepath, _id):
+        """Populate the dictionary of lists"""
+        _file = self._files.get(filepath)
+
+        if not _file:
+            self._files[filepath] = [_id]
+        else:
+            _file.append(_id)
+
+    def process(self):
+        """handle the importing"""
+        for _file, ids in self._files.items():
+            linking.load_group_reference_objects(
+                    _file, ids)
+
+
 class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
     bl_idname = "wm.powerlib_link_in_component"
     bl_label = "TODO"
@@ -602,13 +622,16 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
 
         print('Linking in {}'.format(active_asset.name))
 
+        files = AssetFiles()
+
         for component_list in active_asset.components_by_type:
             if component_list.component_type == 'GROUP_REFERENCE_OBJECTS':
                 for component in component_list.components:
-                    linking.load_group_reference_objects(
-                        component.absolute_filepath, component.id)
+                    files.add(component.absolute_filepath, component.id)
             else:
                 print('Skipping anything that is not GROUP_REFERENCE_OBJECTS')
+
+        files.process()
 
         return {'FINISHED'}
 
@@ -743,24 +766,26 @@ class ASSET_PT_powerlib(Panel):
 
         if wm.powerlib_props.active_col:
             layout.separator()
-            active_asset = asset_collection.assets[asset_collection.active_asset]
 
-            for components_of_type in active_asset.components_by_type:
-                row = layout.row()
-                row.label(components_of_type.component_type)
-                row = layout.row()
-                row.template_list(
-                    "ASSET_UL_asset_components",           # type
-                    "components_of_type.component_type",   # unique id
-                    components_of_type, "components",      # pointer to the CollectionProperty
-                    components_of_type, "active_component",# pointer to the active identifier
-                    rows=2,
-                )
-                # add/remove/specials UI list Menu
-                if is_edit_mode:
-                    col = row.column(align=True)
-                    col.operator("wm.powerlib_component_add", icon='ZOOMIN', text="").component_type = components_of_type.component_type
-                    col.operator("wm.powerlib_component_del", icon='ZOOMOUT', text="").component_type = components_of_type.component_type
+            if asset_collection.assets:
+                active_asset = asset_collection.assets[asset_collection.active_asset]
+
+                for components_of_type in active_asset.components_by_type:
+                    row = layout.row()
+                    row.label(components_of_type.component_type)
+                    row = layout.row()
+                    row.template_list(
+                        "ASSET_UL_asset_components",           # type
+                        "components_of_type.component_type",   # unique id
+                        components_of_type, "components",      # pointer to the CollectionProperty
+                        components_of_type, "active_component",# pointer to the active identifier
+                        rows=2,
+                    )
+                    # add/remove/specials UI list Menu
+                    if is_edit_mode:
+                        col = row.column(align=True)
+                        col.operator("wm.powerlib_component_add", icon='ZOOMIN', text="").component_type = components_of_type.component_type
+                        col.operator("wm.powerlib_component_del", icon='ZOOMOUT', text="").component_type = components_of_type.component_type
 
 
         if is_edit_mode:
