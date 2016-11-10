@@ -82,14 +82,15 @@ enum_component_type = EnumProperty(
 )
 
 
-def enum_item_name(enum, value):
-    """Return the item name of an enum
+def enum_item_name_icon(enum, value):
+    """Return the item name and icon of an enum
     """
     prop, settings = enum
 
     for item in settings['items']:
         if item[0] == value:
-            return item[1]
+            return item[1], item[3]
+    return "Error", 'ERROR'
 
 
 class ComponentItem(PropertyGroup):
@@ -783,8 +784,8 @@ class ASSET_PT_powerlib(Panel):
 
                 for components_of_type in active_asset.components_by_type:
                     row = layout.row()
-                    name = enum_item_name(enum_component_type, components_of_type.component_type)
-                    row.label(text=name)
+                    name, icon = enum_item_name_icon(enum_component_type, components_of_type.component_type)
+                    row.label(text=name, icon=icon)
 
                     row = layout.row()
                     row.template_list(
