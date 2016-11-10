@@ -73,7 +73,7 @@ runtime_vars["save_state"] = SaveState.AllSaved
 enum_component_type = EnumProperty(
     items=(
         ('INSTANCE_GROUPS', "Instance Groups", "", 'EMPTY_DATA', 0),
-        ('NONINSTANCE_GROUPS', "Non Instance Groups", "", 'GROUP', 1),
+        #('NONINSTANCE_GROUPS', "Non Instance Groups", "", 'GROUP', 1),
         ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", "", 'OBJECT_DATA', 2),
     ),
     default='INSTANCE_GROUPS',
