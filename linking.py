@@ -149,9 +149,13 @@ def load_instance_groups(filepath, group_names):
         data_to.groups = group_names
 
     scene = bpy.context.scene
+    objects = []
     for group in group_names:
-        instance = bpy.data.objects.new(group.name, None)
-        instance.dupli_type = 'GROUP'
-        instance.dupli_group = group
-        scene.objects.link(instance)
+        ob = bpy.data.objects.new(group.name, None)
+        ob.dupli_type = 'GROUP'
+        ob.dupli_group = group
+
+        scene.objects.link(ob)
+        objects.append(ob)
+    return objects
 
