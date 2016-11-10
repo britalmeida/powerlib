@@ -595,22 +595,38 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
 
 class AssetFiles():
     def __init__(self):
+        self._components = {}
         self._files = {}
 
-    def add(self, filepath, _id):
-        """Populate the dictionary of lists"""
-        _file = self._files.get(filepath)
+    @staticmethod
+    def get_nested_array(_dict, key, array):
+        if key not in _dict:
+            _dict[key] = array()
+        return _dict[key]
 
-        if not _file:
-            self._files[filepath] = [_id]
-        else:
-            _file.append(_id)
+    def get_component(self, component_type):
+        return self.get_nested_array(self._components, component_type, dict)
+
+    def add(self, component_type, filepath, _id):
+        """Populate the dictionary of lists"""
+        _component = self.get_component(component_type)
+        _file = self.get_nested_array(_component, filepath, list)
+        _file.append(_id)
 
     def process(self):
         """handle the importing"""
-        for _file, ids in self._files.items():
-            linking.load_group_reference_objects(
-                    _file, ids)
+        callbacks = {
+                'GROUP_REFERENCE_OBJECTS': linking.load_group_reference_objects,
+                'INSTANCE_GROUPS': linking.load_instance_groups,
+                }
+
+        for _component, _files in self._components.items():
+            callback = callbacks.get(_component)
+
+            assert callback, "Component \"{0}\" not supported".format(_component)
+
+            for _file, ids in _files.items():
+                callback(_file, ids)
 
 
 class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
@@ -637,11 +653,10 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
         files = AssetFiles()
 
         for component_list in active_asset.components_by_type:
-            if component_list.component_type == 'GROUP_REFERENCE_OBJECTS':
-                for component in component_list.components:
-                    files.add(component.absolute_filepath, component.id)
-            else:
-                print('Skipping anything that is not GROUP_REFERENCE_OBJECTS')
+            component_type = component_list.component_type
+
+            for component in component_list.components:
+                files.add(component_type, component.absolute_filepath, component.id)
 
         files.process()
 

@@ -139,3 +139,19 @@ def process_group_reference_objects(data):
         for ob in objects:
             treat_ob(ob, group)
 
+
+def load_instance_groups(filepath, group_names):
+    print('Loading groups {} : {}'.format(filepath, group_names))
+    rel_path = relative_path_to_file(filepath)
+
+    # Road a object scene we know the name of.
+    with bpy.data.libraries.load(rel_path, link=True) as (data_from, data_to):
+        data_to.groups = group_names
+
+    scene = bpy.context.scene
+    for group in group_names:
+        instance = bpy.data.objects.new(group.name, None)
+        instance.dupli_type = 'GROUP'
+        instance.dupli_group = group
+        scene.objects.link(instance)
+
