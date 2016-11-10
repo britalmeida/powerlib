@@ -652,7 +652,10 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
     bl_description = "TODO"
     bl_options = {'UNDO', 'REGISTER'}
 
-    index = IntProperty(options={'HIDDEN'})
+    index = IntProperty(
+            default=-1,
+            options={'HIDDEN', 'SKIP_SAVE'},
+            )
 
     def execute(self, context):
         from . import linking
@@ -663,7 +666,11 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
         wm = context.window_manager
 
         asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
-        active_asset = asset_collection.assets[asset_collection.active_asset]
+
+        if self.index == -1:
+            active_asset = asset_collection.assets[asset_collection.active_asset]
+        else:
+            active_asset = asset_collection.assets[self.index]
 
         print('Linking in {}'.format(active_asset.name))
 
