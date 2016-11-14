@@ -52,6 +52,15 @@ from bpy.props import (
     PointerProperty,
 )
 
+
+VERBOSE = False # enable this for debugging
+
+def debug_print(*args):
+    """Print debug messages"""
+    if VERBOSE:
+        print(*args)
+
+
 # Data Structure ##############################################################
 
 # A powerlib library is structured as a series of collections of assets.
@@ -114,7 +123,7 @@ class Component(PropertyGroup):
         importlib.reload(linking)
 
         fp_rel_to_lib = linking.relative_path_to_lib(self.filepath_rel)
-        print('Updating library link to {}'.format(fp_rel_to_lib))
+        debug_print('Updating library link to {}'.format(fp_rel_to_lib))
         self.filepath = fp_rel_to_lib
 
         cache_key = self.filepath
@@ -158,7 +167,7 @@ class Component(PropertyGroup):
             return normpath
         else:
             # raise IOError('File {} not found'.format(normpath))
-            print('IOError: File {} not found'.format(normpath))
+            debug_print('IOError: File {} not found'.format(normpath))
 
 
 class ComponentsList(PropertyGroup):
@@ -295,15 +304,15 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         # Load single json library file
 
         library_path = bpy.path.abspath(context.scene.lib_path)
-        print("PowerLib2: Reading JSON library file from %s" % library_path)
+        debug_print("PowerLib2: Reading JSON library file from %s" % library_path)
 
         if not library_path:
-            print("PowerLib2: ... no library path specified!")
+            debug_print("PowerLib2: ... no library path specified!")
             runtime_vars["read_state"] = ReadState.NoFile
             return {'FINISHED'}
 
         if not os.path.exists(library_path):
-            print("PowerLib2: ... library filepath invalid!")
+            debug_print("PowerLib2: ... library filepath invalid!")
             runtime_vars["read_state"] = ReadState.FilePathInvalid
             return {'FINISHED'}
 
@@ -314,7 +323,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                 library = json.load(data_file)
             except (json.decoder.JSONDecodeError, KeyError, ValueError):
                 # malformed json data
-                print("PowerLib2: ... JSON content is empty or malformed!")
+                debug_print("PowerLib2: ... JSON content is empty or malformed!")
                 runtime_vars["read_state"] = ReadState.FileContentInvalid
                 return {'FINISHED'}
 
@@ -355,7 +364,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         else:
             runtime_vars["read_state"] = ReadState.EmptyLib
 
-        print("PowerLib2: ... looks good!")
+        debug_print("PowerLib2: ... looks good!")
 
         return {'FINISHED'}
 
@@ -376,10 +385,10 @@ class ASSET_OT_powerlib_save_to_json(Operator):
         # Save properties to the JSON library file
 
         library_path = bpy.path.abspath(context.scene.lib_path)
-        print("PowerLib2: Saving JSON library to file %s" % library_path)
+        debug_print("PowerLib2: Saving JSON library to file %s" % library_path)
 
         if not library_path or not os.path.exists(library_path):
-            print("PowerLib2: ... invalid filepath! Could not save!")
+            debug_print("PowerLib2: ... invalid filepath! Could not save!")
             self.report({'ERROR'}, "Invalid path! Could not save!")
             return {'FINISHED'}
 
@@ -410,7 +419,7 @@ class ASSET_OT_powerlib_save_to_json(Operator):
             json.dump(collections_json_dict, data_file, indent=4, sort_keys=True,)
 
         runtime_vars["save_state"] = SaveState.AllSaved
-        print("PowerLib2: ... no errors!")
+        debug_print("PowerLib2: ... no errors!")
         return {'FINISHED'}
 
 
@@ -672,7 +681,7 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
         else:
             active_asset = asset_collection.assets[self.index]
 
-        print('Linking in {}'.format(active_asset.name))
+        debug_print('Linking in {}'.format(active_asset.name))
 
         files = AssetFiles()
 
@@ -882,7 +891,7 @@ classes = (
 # Reload the JSON library when a file is loaded
 @persistent
 def powerlib_post_load_blend_cb(dummy_context):
-    print("PowerLib2: Loading Add-on and Library")
+    debug_print("PowerLib2: Loading Add-on and Library")
     bpy.ops.wm.powerlib_reload_from_json()
 
 def powerlib_reload_json_cb(self, context):
