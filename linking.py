@@ -53,7 +53,7 @@ def make_local(ob):
             continue
 
         print('Should make %r local: ' % idblock)
-        print('   - result: %s' % idblock.make_local(clear_proxy=False))
+        print('   - result: %s' % idblock.make_local(clear_proxy=True))
 
         # this shouldn't happen, but it does happen :/
         if idblock.library:
