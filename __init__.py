@@ -625,34 +625,17 @@ class AssetFiles():
     def process(self):
         """handle the importing"""
         callbacks = {
-                'GROUP_REFERENCE_OBJECTS': (linking.load_group_reference_objects, None),
-                'INSTANCE_GROUPS': (linking.load_instance_groups, self.sorting),
+                'GROUP_REFERENCE_OBJECTS': linking.load_group_reference_objects,
+                'INSTANCE_GROUPS': linking.load_instance_groups,
                 }
 
         for _component, _files in self._components.items():
-            callback, callback_post = callbacks.get(_component)
+            callback = callbacks.get(_component)
 
             assert callback, "Component \"{0}\" not supported".format(_component)
 
-            objects = []
             for _file, ids in _files.items():
-                objects.extend(callback(_file, ids))
-
-            if callback_post:
-                callback_post(objects)
-
-    @staticmethod
-    def sorting(objects):
-        """Distribute the objects around the 3D cursor"""
-        from mathutils import Vector
-
-        scene = bpy.context.scene
-        limit, offset = 3, 1.0
-        anchor = scene.cursor_location
-        for i, ob in enumerate(objects):
-            x = (i % limit) * offset
-            y = (i // limit) * offset
-            ob.location = anchor + Vector((x, y, 0.0))
+                callback(_file, ids)
 
 
 class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
