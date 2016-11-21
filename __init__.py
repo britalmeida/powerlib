@@ -20,7 +20,7 @@
 
 bl_info = {
     "name": "Powerlib",
-    "author": "Inês Almeida, Francesco Siddi, Olivier Amrein",
+    "author": "Inês Almeida, Francesco Siddi, Olivier Amrein, Dalai Felinto",
     "version": (2, 0, 0),
     "blender": (2, 78, 0),
     "location": "View3D > Tool Shelf (T)",
