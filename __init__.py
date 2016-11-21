@@ -52,6 +52,15 @@ from bpy.props import (
     PointerProperty,
 )
 
+
+VERBOSE = False # enable this for debugging
+
+def debug_print(*args):
+    """Print debug messages"""
+    if VERBOSE:
+        print(*args)
+
+
 # Data Structure ##############################################################
 
 # A powerlib library is structured as a series of collections of assets.
@@ -73,13 +82,25 @@ runtime_vars["save_state"] = SaveState.AllSaved
 enum_component_type = EnumProperty(
     items=(
         ('INSTANCE_GROUPS', "Instance Groups", "", 'EMPTY_DATA', 0),
-        ('NONINSTANCE_GROUPS', "Non Instance Groups", "", 'GROUP', 1),
+        #('NONINSTANCE_GROUPS', "Non Instance Groups", "", 'GROUP', 1),
         ('GROUP_REFERENCE_OBJECTS', "Group Reference Objects", "", 'OBJECT_DATA', 2),
     ),
     default='INSTANCE_GROUPS',
     name="Component Type",
     description="Type of an asset component",
 )
+
+
+def enum_item_name_icon(enum, value):
+    """Return the item name and icon of an enum
+    """
+    prop, settings = enum
+
+    for item in settings['items']:
+        if item[0] == value:
+            return item[1], item[3]
+    return "Error", 'ERROR'
+
 
 class ComponentItem(PropertyGroup):
     name = StringProperty()
@@ -102,7 +123,7 @@ class Component(PropertyGroup):
         importlib.reload(linking)
 
         fp_rel_to_lib = linking.relative_path_to_lib(self.filepath_rel)
-        print('Updating library link to {}'.format(fp_rel_to_lib))
+        debug_print('Updating library link to {}'.format(fp_rel_to_lib))
         self.filepath = fp_rel_to_lib
 
         cache_key = self.filepath
@@ -146,7 +167,7 @@ class Component(PropertyGroup):
             return normpath
         else:
             # raise IOError('File {} not found'.format(normpath))
-            print('IOError: File {} not found'.format(normpath))
+            debug_print('IOError: File {} not found'.format(normpath))
 
 
 class ComponentsList(PropertyGroup):
@@ -283,15 +304,15 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         # Load single json library file
 
         library_path = bpy.path.abspath(context.scene.lib_path)
-        print("PowerLib2: Reading JSON library file from %s" % library_path)
+        debug_print("PowerLib2: Reading JSON library file from %s" % library_path)
 
         if not library_path:
-            print("PowerLib2: ... no library path specified!")
+            debug_print("PowerLib2: ... no library path specified!")
             runtime_vars["read_state"] = ReadState.NoFile
             return {'FINISHED'}
 
         if not os.path.exists(library_path):
-            print("PowerLib2: ... library filepath invalid!")
+            debug_print("PowerLib2: ... library filepath invalid!")
             runtime_vars["read_state"] = ReadState.FilePathInvalid
             return {'FINISHED'}
 
@@ -302,7 +323,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
                 library = json.load(data_file)
             except (json.decoder.JSONDecodeError, KeyError, ValueError):
                 # malformed json data
-                print("PowerLib2: ... JSON content is empty or malformed!")
+                debug_print("PowerLib2: ... JSON content is empty or malformed!")
                 runtime_vars["read_state"] = ReadState.FileContentInvalid
                 return {'FINISHED'}
 
@@ -343,7 +364,7 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
         else:
             runtime_vars["read_state"] = ReadState.EmptyLib
 
-        print("PowerLib2: ... looks good!")
+        debug_print("PowerLib2: ... looks good!")
 
         return {'FINISHED'}
 
@@ -364,10 +385,10 @@ class ASSET_OT_powerlib_save_to_json(Operator):
         # Save properties to the JSON library file
 
         library_path = bpy.path.abspath(context.scene.lib_path)
-        print("PowerLib2: Saving JSON library to file %s" % library_path)
+        debug_print("PowerLib2: Saving JSON library to file %s" % library_path)
 
         if not library_path or not os.path.exists(library_path):
-            print("PowerLib2: ... invalid filepath! Could not save!")
+            debug_print("PowerLib2: ... invalid filepath! Could not save!")
             self.report({'ERROR'}, "Invalid path! Could not save!")
             return {'FINISHED'}
 
@@ -398,7 +419,7 @@ class ASSET_OT_powerlib_save_to_json(Operator):
             json.dump(collections_json_dict, data_file, indent=4, sort_keys=True,)
 
         runtime_vars["save_state"] = SaveState.AllSaved
-        print("PowerLib2: ... no errors!")
+        debug_print("PowerLib2: ... no errors!")
         return {'FINISHED'}
 
 
@@ -583,22 +604,55 @@ class ASSET_OT_powerlib_component_del(ColAndAssetRequiredOperator):
 
 class AssetFiles():
     def __init__(self):
+        self._components = {}
         self._files = {}
 
-    def add(self, filepath, _id):
-        """Populate the dictionary of lists"""
-        _file = self._files.get(filepath)
+    @staticmethod
+    def get_nested_array(_dict, key, array):
+        if key not in _dict:
+            _dict[key] = array()
+        return _dict[key]
 
-        if not _file:
-            self._files[filepath] = [_id]
-        else:
-            _file.append(_id)
+    def get_component(self, component_type):
+        return self.get_nested_array(self._components, component_type, dict)
+
+    def add(self, component_type, filepath, _id):
+        """Populate the dictionary of lists"""
+        _component = self.get_component(component_type)
+        _file = self.get_nested_array(_component, filepath, list)
+        _file.append(_id)
 
     def process(self):
         """handle the importing"""
-        for _file, ids in self._files.items():
-            linking.load_group_reference_objects(
-                    _file, ids)
+        callbacks = {
+                'GROUP_REFERENCE_OBJECTS': (linking.load_group_reference_objects, None),
+                'INSTANCE_GROUPS': (linking.load_instance_groups, self.sorting),
+                }
+
+        for _component, _files in self._components.items():
+            callback, callback_post = callbacks.get(_component)
+
+            assert callback, "Component \"{0}\" not supported".format(_component)
+
+            objects = []
+            for _file, ids in _files.items():
+                objects.extend(callback(_file, ids))
+
+            if callback_post:
+                callback_post(objects)
+
+    @staticmethod
+    def sorting(objects):
+        """Distribute the objects around the 3D cursor"""
+        from mathutils import Vector
+
+        scene = bpy.context.scene
+        limit, offset = 3, 1.0
+        anchor = scene.cursor_location
+        for i, ob in enumerate(objects):
+            x = (i % limit) * offset
+            y = (i // limit) * offset
+            ob.location = anchor + Vector((x, y, 0.0))
 
 
 class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
@@ -607,7 +661,10 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
     bl_description = "TODO"
     bl_options = {'UNDO', 'REGISTER'}
 
-    index = IntProperty(options={'HIDDEN'})
+    index = IntProperty(
+            default=-1,
+            options={'HIDDEN', 'SKIP_SAVE'},
+            )
 
     def execute(self, context):
         from . import linking
@@ -618,18 +675,21 @@ class ASSET_OT_powerlib_link_in_component(ColAndAssetRequiredOperator):
         wm = context.window_manager
 
         asset_collection = wm.powerlib_props.collections[wm.powerlib_props.active_col]
-        active_asset = asset_collection.assets[asset_collection.active_asset]
 
-        print('Linking in {}'.format(active_asset.name))
+        if self.index == -1:
+            active_asset = asset_collection.assets[asset_collection.active_asset]
+        else:
+            active_asset = asset_collection.assets[self.index]
+
+        debug_print('Linking in {}'.format(active_asset.name))
 
         files = AssetFiles()
 
         for component_list in active_asset.components_by_type:
-            if component_list.component_type == 'GROUP_REFERENCE_OBJECTS':
-                for component in component_list.components:
-                    files.add(component.absolute_filepath, component.id)
-            else:
-                print('Skipping anything that is not GROUP_REFERENCE_OBJECTS')
+            component_type = component_list.component_type
+
+            for component in component_list.components:
+                files.add(component_type, component.absolute_filepath, component.id)
 
         files.process()
 
@@ -772,7 +832,9 @@ class ASSET_PT_powerlib(Panel):
 
                 for components_of_type in active_asset.components_by_type:
                     row = layout.row()
-                    row.label(components_of_type.component_type)
+                    name, icon = enum_item_name_icon(enum_component_type, components_of_type.component_type)
+                    row.label(text=name, icon=icon)
+
                     row = layout.row()
                     row.template_list(
                         "ASSET_UL_asset_components",           # type
@@ -829,7 +891,7 @@ classes = (
 # Reload the JSON library when a file is loaded
 @persistent
 def powerlib_post_load_blend_cb(dummy_context):
-    print("PowerLib2: Loading Add-on and Library")
+    debug_print("PowerLib2: Loading Add-on and Library")
     bpy.ops.wm.powerlib_reload_from_json()
 
 def powerlib_reload_json_cb(self, context):

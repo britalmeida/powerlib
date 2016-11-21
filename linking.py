@@ -53,7 +53,7 @@ def make_local(ob):
             continue
 
         print('Should make %r local: ' % idblock)
-        print('   - result: %s' % bpy.data.make_local(idblock, clear_proxy=False))
+        print('   - result: %s' % idblock.make_local(clear_proxy=False))
 
         # this shouldn't happen, but it does happen :/
         if idblock.library:
@@ -138,4 +138,24 @@ def process_group_reference_objects(data):
     for group, objects in data.items():
         for ob in objects:
             treat_ob(ob, group)
+
+
+def load_instance_groups(filepath, group_names):
+    print('Loading groups {} : {}'.format(filepath, group_names))
+    rel_path = relative_path_to_file(filepath)
+
+    # Road a object scene we know the name of.
+    with bpy.data.libraries.load(rel_path, link=True) as (data_from, data_to):
+        data_to.groups = group_names
+
+    scene = bpy.context.scene
+    objects = []
+    for group in group_names:
+        ob = bpy.data.objects.new(group.name, None)
+        ob.dupli_type = 'GROUP'
+        ob.dupli_group = group
+
+        scene.objects.link(ob)
+        objects.append(ob)
+    return objects
 
