@@ -132,6 +132,7 @@ def load_group_reference_objects(filepath, group_names):
 
     # add the new objects and make them local
     process_group_reference_objects(data)
+    return []
 
 
 def process_group_reference_objects(data):
