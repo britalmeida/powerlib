@@ -1,6 +1,15 @@
 import os
 import bpy
 
+
+VERBOSE = False # enable this for debugging
+
+def debug_print(*args):
+    """Print debug messages"""
+    if VERBOSE:
+        print(*args)
+
+
 def relative_path_to_file(filepath):
     """Makes a path relative to the current file"""
     return bpy.path.relpath(filepath)
@@ -52,8 +61,8 @@ def make_local(ob):
             # Already local
             continue
 
-        print('Should make %r local: ' % idblock)
-        print('   - result: %s' % idblock.make_local(clear_proxy=True))
+        debug_print('Should make %r local: ' % idblock)
+        debug_print('   - result: %s' % idblock.make_local(clear_proxy=True))
 
         # this shouldn't happen, but it does happen :/
         if idblock.library:
@@ -63,23 +72,23 @@ def make_local(ob):
 def treat_ob(ob, grp):
     """Remap existing ob to the new ob"""
     ob_name = ob.name
-    print('Processing {}'.format(ob_name))
+    debug_print('Processing {}'.format(ob_name))
 
     try:
         existing = bpy.data.objects[ob_name, None]
 
     except KeyError:
-        print('Not yet in Blender, just linking to scene.')
+        debug_print('Not yet in Blender, just linking to scene.')
         bpy.context.scene.objects.link(ob)
 
         make_local(ob)
         ob = bpy.data.objects[ob_name, None]
 
-        print('GRP: ', grp.name)
+        debug_print('GRP: ', grp.name)
         grp.objects.link(ob)
 
     else:
-        print('Updating {}'.format(ob.name))
+        debug_print('Updating {}'.format(ob.name))
         # when an object already exists:
         # - find local version
         # - user_remap() it
@@ -100,7 +109,7 @@ def treat_ob(ob, grp):
 
 def load_group_reference_objects(filepath, group_names):
     # We load one group at a time
-    print('Loading groups {} : {}'.format(filepath, group_names))
+    debug_print('Loading groups {} : {}'.format(filepath, group_names))
     rel_path = relative_path_to_file(filepath)
 
     # Road a object scene we know the name of.
@@ -109,7 +118,7 @@ def load_group_reference_objects(filepath, group_names):
 
     data = {}
     for group in data_to.groups:
-        print('Handling group {}'.format(group.name))
+        debug_print('Handling group {}'.format(group.name))
         ref_group_name = '__REF{}'.format(group.name)
 
         if ref_group_name in bpy.data.groups:
@@ -141,7 +150,7 @@ def process_group_reference_objects(data):
 
 
 def load_instance_groups(filepath, group_names):
-    print('Loading groups {} : {}'.format(filepath, group_names))
+    debug_print('Loading groups {} : {}'.format(filepath, group_names))
     rel_path = relative_path_to_file(filepath)
 
     # Road a object scene we know the name of.
