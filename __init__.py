@@ -133,7 +133,8 @@ class Component(PropertyGroup):
                     continue
                 self.groups.add().name = g.name
         else:
-            with bpy.data.libraries.load(self.absolute_filepath) as (data_from, data_to):
+            filepath = bpy.path.relpath(self.absolute_filepath)
+            with bpy.data.libraries.load(filepath) as (data_from, data_to):
                 for gname in data_from.groups:
                     self.groups.add().name = gname
 
