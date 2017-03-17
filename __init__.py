@@ -334,7 +334,10 @@ class ASSET_OT_powerlib_reload_from_json(Operator):
             asset_collection_prop.name = collection_name
 
             # Assets, eg. Boris
-            for asset_name, asset_json in library[collection_name].items():
+            collection = library[collection_name]
+            for asset_name in sorted(collection.keys()):
+                asset_json = collection[asset_name]
+
                 asset_prop = asset_collection_prop.assets.add()
                 asset_prop.name = asset_name
 
