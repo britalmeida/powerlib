@@ -753,7 +753,7 @@ class ASSET_PT_powerlib(Panel):
             row.alignment = 'CENTER'
             if (read_state == ReadState.NotLoaded or read_state == ReadState.NoFile):
                 if is_edit_mode:
-                    row.label("No library path chosen", icon='ERROR')
+                    row.label("No library path loaded", icon='ERROR')
                 else:
                     row.alignment = 'EXPAND'
                     row.label("Choose a library path:")
@@ -875,14 +875,10 @@ classes = (
     ASSET_OT_powerlib_link_in_component,
 )
 
-# Reload the JSON library when a file is loaded
-@persistent
-def powerlib_post_load_blend_cb(dummy_context):
+
+def powerlib_lib_path_update_cb(self, context):
     debug_print("PowerLib2: Loading Add-on and Library")
     bpy.ops.wm.powerlib_reload_from_json()
-
-def powerlib_reload_json_cb(self, context):
-    powerlib_post_load_blend_cb(context)
 
 
 def register():
@@ -899,15 +895,11 @@ def register():
         name="Powerlib Add-on Library Path",
         description="Path to a PowerLib JSON file",
         subtype='FILE_PATH',
-        update=powerlib_reload_json_cb,
+        update=powerlib_lib_path_update_cb,
     )
-
-    bpy.app.handlers.load_post.append(powerlib_post_load_blend_cb)
 
 
 def unregister():
-    bpy.app.handlers.load_post.remove(powerlib_post_load_blend_cb)
-
     del bpy.types.Scene.lib_path
     del bpy.types.WindowManager.powerlib_props
 
